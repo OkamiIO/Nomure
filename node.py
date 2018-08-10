@@ -8,6 +8,15 @@ fdb.api_version(520)
 database = fdb.open()
 
 
+class NodeStorage:
+    """
+    Contains the Node in memory class based on their name
+
+    {'node_name': Node instance}
+    """
+    nodes = {}
+
+
 class PropertyKind(Enum):
     """
     Describes the possible types to be set as a value in foundation db and this layer
@@ -43,8 +52,10 @@ class WithNodeProperty(NodeProperty):
     Takes the node name as an additional parameter
     """
 
-    def __init__(self, kind, node_name, vertex_properties, indexes=None):
+    def __init__(self, kind, node_name, vertex_properties=None, indexes=None):
         NodeProperty.__init__(self, kind, indexes)
+        if vertex_properties is None:
+            vertex_properties = {}
         self.node_name = node_name
         self.vertex_properties = vertex_properties
 
@@ -123,15 +134,19 @@ class Vertex(Graph):
 
     directory = fdb.directory.create_or_open(database, ('vertex',))
 
-    def __init__(self, attributes):
-        super().__init__(Vertex.directory, attributes)
+    def __init__(self, properties):
+        super().__init__(Vertex.directory, properties)
         self.in_node = 0
         self.out_node = 0
 
     @fdb.transactional
     def set_data(self, tr, data):
-        # TODO
-        pass
+        uid = self.next_count(tr)
+        # TODO, if data is None just return uid
+        if data is not None:
+            # TODO set the properties data
+            pass
+        return uid
 
 
 class Node(Graph):
@@ -168,9 +183,10 @@ class Node(Graph):
         # indexes
         self.indexes = self.graph['IN']
         # Set the schema in the global schema storage
-        if node_name in Node.schemas:
+        if node_name in Node.schemas or node_name in NodeStorage.nodes:
             raise KeyError("The given node_name is already set in the schema, please check duplication issues")
         Node.schemas[node_name] = schema
+        NodeStorage.nodes[node_name] = self
 
     @property
     def props(self):
@@ -214,22 +230,67 @@ class Node(Graph):
                     return None
 
             if self.props[vertex].kind == PropertyKind.NODE:
+                # Avoid spelling errors
+                v_key = 'vertex'
+                d_key = 'data'
+
                 # must be dict, the 'data' key set the node info, the 'vertex' key set the vertex info
 
                 # if vertex is none, check the properties of the vertex are empty, if don't check for null, if not null
                 # reset transaction
 
                 # if vertex is not a dict, must be a valid uid binary, if not reset transaction
-                if not isinstance(value, dict) or 'data' not in value or 'vertex' not in value:
+                if not isinstance(value, dict) or 'data' not in value or 'vertex' not in value or not value[d_key]:
                     tr.reset()
                     return None
-                pass  # TODO
+
+                # Not given vertex values but the vertex contains properties, reset transaction
+                if not value[v_key] and self.props[vertex].vertex_properties != {}:
+                    tr.reset()
+                    return None
+
+                # Set the vertex data
+                vertex_data = value[v_key]
+                edge = Vertex(self.props[vertex].vertex_properties)
+
+                if vertex_data is None:
+                    vertex_uid = edge.set_data(tr, None)
+                else:
+                    vertex_uid = edge.set(tr, vertex_data)
+
+                # if set fails we reset the tr
+                # TODO check if double reset throws an error (deadlock)
+                if vertex_uid is None:
+                    tr.reset()
+                    return None
+
+                node_data = value[d_key]
+                relation_node = Node.get_node_by_name(self.props[vertex].node_name)
+                if relation_node is None:
+                    tr.reset()
+                    return None
+                if isinstance(node_data, bytes):
+                    # Set the key, the problem is to know the node_name
+                    # (uid, attribute_name, vertex_uid) = 'uid'
+                    if not tr[relation_node.edge[node_data][vertex.encode()]].present():
+                        tr.reset()
+                        return None
+                    tr[self.edge[uid][vertex.encode()][vertex_uid]] = node_data
+                elif isinstance(node_data, dict):
+                    relation_uid = relation_node.set(tr, node_data)
+                    if relation_uid is None:
+                        tr.reset()
+                        return None
+                    tr[self.edge[uid][vertex.encode()][vertex_uid]] = relation_uid
+                    pass
+                else:
+                    tr.reset()
+                    return None
             else:
                 # Set the index
                 # TODO must set the index as a declared index and not automatically?
                 tr[self.indexes[vertex.encode()][fdb_value][uid]] = b''
                 tr[self.edge[uid][vertex.encode()]] = fdb_value
-
         return uid
 
     @fdb.transactional
@@ -274,13 +335,12 @@ class Node(Graph):
         tr.clear_range_startswith(subspace.key())
 
     @staticmethod
-    def get_edge_by_node_name(node_name):
+    def get_node_by_name(node_name):
         """Return the Edge subspace based on the node_name
-
-        WARNING: This function does not check if the subspace exist or not, so use it
-        carefully
         """
-        return Node.directory[node_name]['E']
+        if node_name not in NodeStorage.nodes:
+            return None
+        return NodeStorage.nodes[node_name]
 
     @staticmethod
     def get_as_fdb_value(value):
@@ -318,15 +378,20 @@ class Node(Graph):
                 result[vertex] = self.name
             elif vertex != 'uid' and isinstance(props[vertex], WithNodeProperty):
                 # is a node query subsequent data
-                # TODO depending on how this is serialized we get the range
-                # for uid, _ in tr[edge[edge_id][vertex.encode()].range()]:
-                #     result[vertex] = self.get_edge_fields(
-                #         tr, uid, value, Node.schemas[vertex], Node.get_edge_by_node_name(props[vertex].node_name))
-                node_uid = tr[edge[edge_id][vertex.encode()]]
-                node_props = Node.schemas[props[vertex].node_name]
-                node_edge = Node.get_edge_by_node_name(props[vertex].node_name)
-                result[vertex] = self.get_edge_fields(
-                    tr, node_uid, value, node_props, node_edge)
+                result_nodes = []
+                for vertex_uid, node_uid in tr[edge[edge_id][vertex.encode()].range()]:
+                    # TODO vertex data query
+                    node_props = Node.schemas[props[vertex].node_name]
+                    relation_node = Node.get_node_by_name(props[vertex].node_name)
+
+                    # TODO reset or ignore the field?
+                    if relation_node is None:
+                        tr.reset()
+                        return None
+
+                    result_nodes.append(self.get_edge_fields(
+                        tr, node_uid, value, node_props, relation_node.edge))
+                result[vertex] = result_nodes
             else:
                 # is a property
                 result[vertex] = tr[edge[edge_id][vertex.encode()]]

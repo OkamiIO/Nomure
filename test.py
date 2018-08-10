@@ -1,6 +1,6 @@
 import unittest
 
-from node import Node, NodeProperty, PropertyKind, NodePropertyIndexes, WithNodeProperty
+from node import Node, NodeProperty, PropertyKind, NodePropertyIndexes, WithNodeProperty, NodeStorage
 
 unittest.TestLoader.sortTestMethodsUsing = None
 
@@ -8,6 +8,7 @@ unittest.TestLoader.sortTestMethodsUsing = None
 class TestingNodeBasicProperties(unittest.TestCase):
     def setUp(self):
         Node.schemas = {}
+        NodeStorage.nodes = {}
         self.user_node = Node('user', {
             'name': NodeProperty(PropertyKind.STRING),
             'email': NodeProperty(PropertyKind.STRING, [NodePropertyIndexes.UNIQUE]),
@@ -72,6 +73,7 @@ class TestingNodeBasicProperties(unittest.TestCase):
 class TestingNodeRelationships(unittest.TestCase):
     def setUp(self):
         Node.schemas = {}
+        NodeStorage.nodes = {}
         self.user_node = Node('user', {
             'name': NodeProperty(PropertyKind.STRING),
             'email': NodeProperty(PropertyKind.STRING, [NodePropertyIndexes.UNIQUE]),
