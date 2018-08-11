@@ -160,7 +160,7 @@ class Graph:
 
 class Edge(Graph):
     # Edge:
-    # (uid, (edge_attribute_name, attribute_value)) = 'node_name'
+    # (uid, edge_attribute_name) = 'attribute_value'
 
     directory = fdb.directory.create_or_open(database, ('edge',))
 
@@ -251,11 +251,27 @@ class Node(Graph):
         return True
 
     def get(self, tr, node_uid, fields):
+        """ Get the node specified fields (edges) and field child
+
+        :param tr: Database instance
+        :param node_uid: Node unique identifier
+        :param fields: Edges to be query
+        :return: The result of the transaction
+        """
         if node_uid is None or not self.props_exists(fields, self.props):
             return None
         return self.get_node(tr, node_uid, fields)
 
     def get_node_fields(self, tr, node_uid, fields, props, node_property):
+        """ Get the Node edge data (and child) based on the query fields (edges)
+
+        :param tr: Database instance
+        :param node_uid: Node unique identifier
+        :param fields: Edges to be query
+        :param props: The Node schema properties
+        :param node_property: The Node Edge subdirectory
+        :return: The Node queried fields
+        """
         result = {}
         for property_name, value in fields.items():
             if property_name == '__node_name__':
@@ -373,7 +389,8 @@ class Node(Graph):
                 if NodePropertyIndexes.UNIQUE in self.props[edge_name].indexes:
                     # TODO there must be a better way to handle this validation
                     tr_range = self.indexes[edge_name.encode()][fdb_value].range()
-                    for _, _ in tr.get_range(tr_range.start, tr_range.stop, limit=1):
+                    for _, _ in tr.get_range(tr_range.start, tr_range.stop, limit=1,
+                                             streaming_mode=fdb.StreamingMode.small):
                         return self.reset_transaction(tr)
                 # Set the index
                 # TODO must set the index as a declared index and not automatically?
@@ -383,6 +400,13 @@ class Node(Graph):
 
     @fdb.transactional
     def get_all(self, tr, node_uid):
+        """Return all the node edges and values, does not return relationship data since can cause loops and performance
+        issues
+
+        :param tr: Database instance
+        :param node_uid: The unique identifier to the node to be query
+        :return: All node edges and values
+        """
         if node_uid is None:
             return None
         result = {}
@@ -403,14 +427,35 @@ class Node(Graph):
 
     @fdb.transactional
     def get_node(self, tr, node_uid, fields):
+        """ Get the node by its unique identifier and the described fields (edges) to be query
+
+        :param tr: Database instance
+        :param node_uid: Node unique identifier
+        :param fields: Edges to be query and child nodes edges as well
+        :return: The requested Node data dictionary
+        """
         return self.get_node_fields(tr, node_uid, fields, self.props, self.edges)
 
     @fdb.transactional
     def get_edge_value(self, tr, node_uid, edge_name):
+        """ Get the edge node raw value
+
+        :param tr: Database instance
+        :param node_uid: Node unique identifier
+        :param edge_name: The Edge name
+        :return: The value of the Node Edge
+        """
         return tr[self.edges[node_uid][edge_name.encode()]]
 
     @fdb.transactional
     def get_by(self, tr, edge_name, value):
+        """ Get the nodes edges based on a edge property value
+
+        :param tr: Database instance
+        :param edge_name: The Edge name to be compared
+        :param value: The Edge value
+        :return: The Nodes with the specified edge value
+        """
         fdb_value = self.get_as_fdb_value(value)
 
         if fdb_value is None:
