@@ -3,3 +3,8 @@
 
 # Jetbrains
 .idea
+__pycache__
+
+# GraphQL SDL
+schema.graphql
+.graphqlconfig

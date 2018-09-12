@@ -9,13 +9,21 @@ check the source for more info!
 
 # Features/RoadMap
 
+- [ ] Property Values
+    - [ ] I18N Strings
+    - [ ] Primitive types List
+    - [ ] Enums
+    - [ ] Json (Dictionary)
+
 - [ ] Node implementation
     - [x] Set data
-    - [x] Get data
+    - [ ] Get data
         - [x] get_all
         - [x] get_by_edge_name
         - [x] get_by_fields
+        - [ ] get_by_reverse
     - [x] Index property edges
+    - [x] Inverse Node support `(relation.uid, "edge_name", node.uid) = node_relation_edge.uid`
     - [ ] Update support
     - [ ] Delete support
 
