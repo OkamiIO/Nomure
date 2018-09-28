@@ -24,6 +24,6 @@ defmodule Nomure.TransactionUtils do
   end
 
   defp get_coder_options(dir) do
-    %{coder: dir.coder}
+    %{coder: dir}
   end
 end

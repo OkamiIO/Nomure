@@ -4,7 +4,7 @@
 
 This is the main database we use at [Okami](https://www.okami.io)!
 
-It's main purpose is to server as a main database jsut like you use Postgres or Mysql, but as a Graph data structure
+It's main purpose is to server as a main database just like you use Postgres or Mysql, but as a Graph data structure
 
 The repo acts as a Graph layer for [FoundationDB](https://www.foundationdb.org)!
 
@@ -15,7 +15,7 @@ The repo acts as a Graph layer for [FoundationDB](https://www.foundationdb.org)!
 
 Graph databases are amazing, from the first time that I knew of its operation and use I was fascinated, but most implementations of the Graph databases where used at a big scale on companies like Google and Facebook, with it's use beign more for analisys than storage.
 
-The open source options need really computational expensive storages like Cassandra, Big Table, custom in memory etc... (Janus Graph, Titan, Neo4J, Datastax. Neptune etc...) with the purpose of being used at large scale projects for analysis and again not for storage (due to limitations like ACID and transactions)
+The open source options need really computational (and cost) expensive storages like Cassandra, Big Table, custom in memory etc... (Janus Graph, Titan, Neo4J, Datastax. Neptune etc...) with the purpose of being used at large scale projects for analysis and again not for storage (due to limitations like ACID and transactions)
 
 I wanted something like Posgres (there is agensgraph, but the documentaion is messy and they are focus on big companies as well) that I can use in my small project with limited in economic resources, the only option was Dgraph, an startup open source graph database that is mean to be a fully distributed graph database with all the consistency features of a database like PostgreDB, but the development team was proud and self-centered and the project was affected by it with an unknown direction about the project, but was my only option at the time.
 
@@ -129,6 +129,17 @@ why is the problem
 
 - [ ] More tests
 
+- [ ] Ztandart data compression
+
+    Depends on the use given by the serialization, but strings must be compressed
+
+- [ ] Data Serialization setup (single blob or chunk, this describes the nodes properties)
+
+    So far our problem is the node uids, right now are 64 bit and we need to duplicate them in order to chunk
+    the data, this could lead to big numbers on storage (and possibly memory) since we add this to the indexes
+    and node relationships
+
+    References [FoundationDB Forum](https://forums.foundationdb.org/t/best-practice-of-storing-structs-should-i-pack-or-store-fields-separately/425/5)
 
 ## Installation
 

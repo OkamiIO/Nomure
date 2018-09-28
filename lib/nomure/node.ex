@@ -1,11 +1,12 @@
 defmodule Nomure.Node do
   alias Nomure.Node.{Server, State}
+  alias Nomure.Database.State, as: DatabaseState
 
   def new(db, node_name) do
-    Server.start_link(get_name(node_name), State.from(db, node_name))
+    Server.start_link(get_name(node_name), State.from(node_name, DatabaseState.from(db)))
   end
 
-  def create_node(%FDB.Transaction{} = tr, data, node_name) do
+  def create_node_with_transaction(%FDB.Transaction{} = tr, data, node_name) do
     GenServer.call(get_name(node_name), {:create_node, tr, data})
   end
 
