@@ -13,6 +13,14 @@ defmodule Nomure.Node.Server do
   end
 
   # Server
+  # TODO Here the state absolutelly never changes, I think is better to simplify it just by
+  # returning the state from the GenServer (as a handle call) and run the process ouside the GenServer process
+  # in this way we can avoid bottenecks in the genserver due to concurrent processes reaching it
+
+  # this is important since some transactions can block the GenServer like for example calculating the
+  # recommendations of X user based on Y content
+
+  # for it we can just use the Agent module!
 
   @impl true
   def init([state]) do
