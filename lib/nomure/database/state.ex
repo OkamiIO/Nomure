@@ -13,12 +13,13 @@ defmodule Nomure.Database.State do
     Subspace,
     Dynamic,
     NestedTuple,
-    Nullable
+    Nullable,
+    Identity
   }
 
   alias FDB.Directory
 
-  alias Nomure.Database.Coder.JsonBlob
+  alias Nomure.Database.Coder.GraphValue
 
   @type t :: %__MODULE__{
           serialize_as_blob: boolean(),
@@ -57,7 +58,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # node_properties
-      JsonBlob.new()
+      Identity.new()
     )
   end
 
@@ -73,7 +74,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # property_value
-      Nullable.new(ByteString.new())
+      Nullable.new(GraphValue.new())
     )
   end
 
@@ -95,7 +96,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
-      Nullable.new(ByteString.new())
+      Nullable.new(Identity.new())
     )
   end
 
@@ -117,7 +118,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
-      Nullable.new(ByteString.new())
+      Nullable.new(Identity.new())
     )
   end
 
@@ -139,7 +140,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
-      Nullable.new(ByteString.new())
+      Nullable.new(Identity.new())
     )
   end
 

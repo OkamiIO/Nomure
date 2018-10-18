@@ -1,25 +1,15 @@
 defmodule Nomure.Node do
-  alias Nomure.Node.{Server, State}
+  alias Nomure.Node.Server
   alias Nomure.Database.State, as: DatabaseState
+  alias Nomure.TransactionUtils
 
-  def new(db, node_name) do
-    Server.start_link(get_name(node_name), State.from(node_name, DatabaseState.from(db)))
+  def new(db) do
+    FastGlobal.put(TransactionUtils.get_database_state_key(), DatabaseState.from(db))
   end
 
-  def create_node_with_transaction(%FDB.Transaction{} = tr, data, node_name) do
-    GenServer.call(get_name(node_name), {:create_node, tr, data})
-  end
+  defdelegate create_node_from_state(tr, data, state), to: Server
 
-  def create_node(db, data, node_name) do
-    GenServer.call(get_name(node_name), {:create_node_transaction, db, data})
-  end
+  defdelegate create_node_from_database(tr, data), to: Server
 
-  def node_uid_present?(tr, uid, node_name) do
-    GenServer.call(get_name(node_name), {:node_uid_present?, tr, uid})
-  end
-
-  @spec get_name(String.t()) :: {:via, Registry, {Registry.GraphNodeNames, any()}}
-  def get_name(node_name) do
-    {:via, Registry, {Registry.GraphNodeNames, node_name}}
-  end
+  defdelegate node_exist?(tr, ui, node_name, state), to: Server
 end

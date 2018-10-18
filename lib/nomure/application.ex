@@ -10,7 +10,6 @@ defmodule Nomure.Application do
     children = [
       # Starts a worker by calling: Nomure.Worker.start_link(arg)
       # {Nomure.Worker, arg},
-      {Registry, keys: :unique, name: Registry.GraphNodeNames}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

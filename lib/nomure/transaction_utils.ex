@@ -2,6 +2,10 @@ defmodule Nomure.TransactionUtils do
   import FDB.Option
   alias FDB.Transaction
 
+  @database_state_key :node_state
+
+  def get_database_state_key, do: @database_state_key
+
   @doc """
   Set the transaction with the given key and value, it changes the coder based in the dir parameter
   """
