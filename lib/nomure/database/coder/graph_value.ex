@@ -1,7 +1,6 @@
 defmodule Nomure.Database.Coder.GraphValue do
   @moduledoc """
-  A module that specifies how the data is serialized, pretty much as the `FDB.Coder.Dynamic` but without
-  the need of specifing the type
+  A module that specifies how the data is serialized as a value.
 
   It uses simple binary serialization to make it easier to port into another languages bindings
 
@@ -12,6 +11,7 @@ defmodule Nomure.Database.Coder.GraphValue do
   import Nomure.Database.Coder.Guards,
     only: [is_int: 1, is_long: 1, is_short: 1, is_long_string: 1, is_byte: 1]
 
+  @nil_header <<0x00>>
   @uid_header <<0x01>>
   @byte_header <<0x02>>
   @short_header <<0x03>>
@@ -23,8 +23,8 @@ defmodule Nomure.Database.Coder.GraphValue do
   @string_header <<0x09>>
   @string_compressed_header <<0x0A>>
 
-  @string_size 16
-  @max_buffed_size 10000
+  @string_size Application.get_env(:nomure, :max_string_size_uncompress, 32)
+  @max_buffer_size 10000
 
   @spec new() :: FDB.Coder.t()
   def new() do
@@ -34,6 +34,14 @@ defmodule Nomure.Database.Coder.GraphValue do
   @impl true
   def encode(<<_value::little-integer-unsigned-size(128)>> = value, _) do
     @uid_header <> value
+  end
+
+  def encode("", _) do
+    @nil_header
+  end
+
+  def encode(nil, _) do
+    @nil_header
   end
 
   # TODO use kind of SIMD compression integer? hmm (Tho I don't know if is a real use for it here)
@@ -92,6 +100,11 @@ defmodule Nomure.Database.Coder.GraphValue do
   end
 
   @impl true
+  def decode(<<@nil_header, rest::binary>>, _) do
+    # We return an string in nil because if a key does not exist it will return nil as wells
+    {"nil", rest}
+  end
+
   def decode(@uid_header <> <<value::little-integer-unsigned-size(128), rest::binary>>, _) do
     {value, rest}
   end
@@ -143,11 +156,11 @@ defmodule Nomure.Database.Coder.GraphValue do
   defp raise_if_too_big(value, compressed?) do
     size = byte_size(value)
 
-    if size > @max_buffed_size do
+    if size > @max_buffer_size do
       # TODO values in FDB cannot be longer than 10KB, do we throw and error if the file is too big?
       # Or we must implement string chunking
       raise Nomure.Error.NodeValueTooBig,
-        max_size: @max_buffed_size,
+        max_size: @max_buffer_size,
         current_size: size,
         compressed?: compressed?
     end

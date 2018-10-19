@@ -3,6 +3,7 @@ defmodule Nomure.TransactionUtils do
   alias FDB.Transaction
 
   @database_state_key :node_state
+  @uid_size Application.get_env(:nomure, :uid_key_size, 64)
 
   def get_database_state_key, do: @database_state_key
 
@@ -33,15 +34,15 @@ defmodule Nomure.TransactionUtils do
       tr,
       key,
       mutation_type_add(),
-      <<addition::little-integer-unsigned-size(128)>>,
-      %{coder: FDB.Coder.ByteString.new()}
+      <<addition::little-integer-unsigned-size(@uid_size)>>,
+      %{coder: FDB.Transaction.Coder.new()}
     )
 
-    <<counter::little-integer-unsigned-size(128)>> = Transaction.get(tr, key)
+    <<counter::little-integer-unsigned-size(@uid_size)>> = Transaction.get(tr, key)
     counter
   end
 
   defp get_coder_options(dir) do
-    %{coder: dir}
+    %{coder: dir.coder}
   end
 end

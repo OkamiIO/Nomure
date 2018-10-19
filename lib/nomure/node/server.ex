@@ -4,32 +4,47 @@ defmodule Nomure.Node.Server do
   alias Nomure.Database.State
   alias Nomure.TransactionUtils
 
-  def create_node_from_state(%FDB.Transaction{} = tr, data, %State{} = state) do
+  def create_node(data) do
+    state = get_state()
+
+    Database.transact(state.db, fn tr ->
+      create_node(tr, data, state)
+    end)
+  end
+
+  def create_node(%FDB.Transaction{} = tr, data, %State{} = state) do
     get_impl().insert_data(tr, data, state)
   end
 
-  def create_node_from_database(%FDB.Database{} = db, data) do
-    state = FastGlobal.get(TransactionUtils.get_database_state_key())
+  def node_exist?(uid, node_name) do
+    state = get_state()
 
-    Database.transact(db, fn tr ->
-      get_impl().insert_data(tr, data, state)
+    Database.transact(state.db, fn tr ->
+      node_exist?(tr, uid, node_name, state)
     end)
   end
 
   def node_exist?(
         tr,
-        <<_raw_uid::little-integer-unsigned-size(128)>> = uid,
+        uid,
         node_name,
         %State{
           properties: props_dir
         }
       ) do
-    {:ok, _tr, result} = TransactionUtils.get_transaction(tr, {node_name, uid}, props_dir)
+    {:ok, _tr, result} =
+      TransactionUtils.get_transaction(tr, {{node_name, uid}, "uid"}, props_dir)
 
     result != nil
   end
 
   def get_impl() do
-    Nomure.Node.DefaultImpl
+    Nomure.Node.ChunkImpl
+  end
+
+  defp get_state() do
+    [{_key, state} | _] = :ets.lookup(:database_state, TransactionUtils.get_database_state_key())
+
+    state
   end
 end

@@ -30,4 +30,7 @@ use Mix.Config
 #     import_config "#{Mix.env}.exs"
 
 config :nomure,
-  serialize_as_blob: true
+  serialize_as_blob: false,
+  uid_key_size: 64,
+  max_string_size_uncompress: 32,
+  max_string_size_indexable: 16

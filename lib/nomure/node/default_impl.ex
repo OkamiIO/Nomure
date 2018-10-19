@@ -48,19 +48,9 @@ defmodule Nomure.Node.DefaultImpl do
       {_, value} when is_primitive(value) ->
         false
 
-      {key, [%Nomure.Schema.Property.I18NString{}] = value} ->
-        not all_i18n?(key, value)
-
       # please send a valid data
       {key, value} ->
         raise_property_error(key, value)
-    end)
-  end
-
-  defp all_i18n?(key, map) do
-    Enum.all?(map, fn
-      %Nomure.Schema.Property.I18NString{} -> true
-      _ -> raise_property_error(key, map)
     end)
   end
 

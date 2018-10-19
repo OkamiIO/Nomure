@@ -1,13 +1,20 @@
 defmodule Nomure.Database.State do
-  @enforce_keys [:serialize_as_blob, :properties, :properties_index, :out_nodes, :inverse_nodes]
-  defstruct [:serialize_as_blob, :properties, :properties_index, :out_nodes, :inverse_nodes]
+  @enforce_keys [
+    :db,
+    :serialize_as_blob,
+    :properties,
+    :properties_index,
+    :out_nodes,
+    :inverse_nodes
+  ]
+  defstruct [:db, :serialize_as_blob, :properties, :properties_index, :out_nodes, :inverse_nodes]
 
   @serialize_as_blob Application.get_env(:nomure, :serialize_as_blob)
 
   alias FDB.{Transaction, Database}
 
   alias FDB.Coder.{
-    LittleEndianInteger,
+    Integer,
     Tuple,
     ByteString,
     Subspace,
@@ -22,6 +29,7 @@ defmodule Nomure.Database.State do
   alias Nomure.Database.Coder.GraphValue
 
   @type t :: %__MODULE__{
+          db: Database.t(),
           serialize_as_blob: boolean(),
           properties: Database.t(),
           properties_index: Database.t(),
@@ -31,6 +39,7 @@ defmodule Nomure.Database.State do
 
   def from(db, serialize_as_blob \\ @serialize_as_blob) do
     %__MODULE__{
+      db: db,
       serialize_as_blob: serialize_as_blob,
       properties:
         FDB.Database.set_defaults(db, %{coder: get_properties_coder(db, serialize_as_blob)}),
@@ -74,7 +83,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # property_value
-      Nullable.new(GraphValue.new())
+      GraphValue.new()
     )
   end
 
@@ -96,7 +105,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
-      Nullable.new(Identity.new())
+      GraphValue.new()
     )
   end
 
@@ -151,7 +160,7 @@ defmodule Nomure.Database.State do
   #
   # (node_name, uid)
   defp get_uid_coder() do
-    NestedTuple.new({ByteString.new(), LittleEndianInteger.new(64)})
+    NestedTuple.new({ByteString.new(), Integer.new()})
   end
 
   defp get_dir(db, path_name) do
