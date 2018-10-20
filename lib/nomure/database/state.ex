@@ -9,8 +9,6 @@ defmodule Nomure.Database.State do
   ]
   defstruct [:db, :serialize_as_blob, :properties, :properties_index, :out_nodes, :inverse_nodes]
 
-  @serialize_as_blob Application.get_env(:nomure, :serialize_as_blob)
-
   alias FDB.{Transaction, Database}
 
   alias FDB.Coder.{
@@ -20,13 +18,14 @@ defmodule Nomure.Database.State do
     Subspace,
     Dynamic,
     NestedTuple,
-    Nullable,
     Identity
   }
 
   alias FDB.Directory
 
   alias Nomure.Database.Coder.GraphValue
+
+  @serialize_as_blob Application.get_env(:nomure, :serialize_as_blob)
 
   @type t :: %__MODULE__{
           db: Database.t(),
@@ -98,10 +97,8 @@ defmodule Nomure.Database.State do
         Tuple.new({
           # property_name
           ByteString.new(),
-          # property_value
-          Dynamic.new(),
-          # node_uid
-          get_uid_coder()
+          # {property_value, uid}
+          Dynamic.new()
         })
       ),
       # dummy_value, nil
@@ -118,16 +115,16 @@ defmodule Nomure.Database.State do
       Subspace.new(
         inverse_dir,
         Tuple.new({
-          # relation_uid
+          # node_uid
           get_uid_coder(),
           # edge_name
           ByteString.new(),
-          # relation_node_uid
+          # relation_uid
           get_uid_coder()
         })
       ),
       # dummy_value, nil
-      Nullable.new(Identity.new())
+      GraphValue.new()
     )
   end
 
@@ -149,7 +146,7 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
-      Nullable.new(Identity.new())
+      GraphValue.new()
     )
   end
 

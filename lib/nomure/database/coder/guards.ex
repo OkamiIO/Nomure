@@ -1,4 +1,6 @@
 defmodule Nomure.Database.Coder.Guards do
+  @string_size Application.get_env(:nomure, :max_string_size_uncompress, 32)
+
   defguard is_byte(value) when is_integer(value) and value >= -128 and value <= 127
 
   defguard is_short(value) when is_integer(value) and value >= -32768 and value <= 32767
@@ -10,5 +12,5 @@ defmodule Nomure.Database.Coder.Guards do
            when is_integer(value) and value >= -9_223_372_036_854_775_808 and
                   value <= 9_223_372_036_854_775_807
 
-  defguard is_long_string(value) when is_binary(value) and byte_size(value) > 16
+  defguard is_long_string(value) when is_binary(value) and byte_size(value) > @string_size
 end

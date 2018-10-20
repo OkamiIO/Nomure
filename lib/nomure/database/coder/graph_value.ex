@@ -4,7 +4,7 @@ defmodule Nomure.Database.Coder.GraphValue do
 
   It uses simple binary serialization to make it easier to port into another languages bindings
 
-  CAN'T BE USED AS A TUPLE VALUE! For that use `FDB.Coder.Dynamic` that uses FDB standarts
+  CAN'T BE USED AS A TUPLE VALUE! For that use `FDB.Coder.Dynamic` that uses FDB standarts to preserve order
   """
   use FDB.Coder.Behaviour
 
@@ -157,8 +157,7 @@ defmodule Nomure.Database.Coder.GraphValue do
     size = byte_size(value)
 
     if size > @max_buffer_size do
-      # TODO values in FDB cannot be longer than 10KB, do we throw and error if the file is too big?
-      # Or we must implement string chunking
+      # TODO values in FDB cannot be longer than 10KB, tho we could add chunking it but it adds complexity
       raise Nomure.Error.NodeValueTooBig,
         max_size: @max_buffer_size,
         current_size: size,

@@ -5,14 +5,22 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
   alias Nomure.Database.State
   alias Nomure.Schema.ChildrenNode
 
-  def insert_realtionships(
+  def insert_relationships(
         tr,
         uid,
         relationships,
         state
       ) do
     # must return a list with the relationship uids
-    Enum.map(relationships, fn {key, value} -> insert_relationship(tr, uid, key, value, state) end)
+    Enum.reduce(relationships, %{}, fn
+      {key, value}, acc ->
+        result =
+          Enum.map(value, fn %ChildrenNode{} = children ->
+            insert_relationship(tr, uid, key, children, state)
+          end)
+
+        Map.put(acc, key, result)
+    end)
   end
 
   # The user can give only the relation id wihtout creating the record
@@ -54,6 +62,11 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
   end
 
   defp add_relationship(tr, uid, edge_name, relation_uid, out_nodes_dir) do
-    Utils.set_transaction(tr, {uid, edge_name, relation_uid}, nil, out_nodes_dir)
+    Utils.set_transaction(
+      tr,
+      {uid, edge_name |> Atom.to_string(), relation_uid},
+      nil,
+      out_nodes_dir
+    )
   end
 end

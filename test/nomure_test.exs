@@ -3,7 +3,7 @@ defmodule NomureTest do
   doctest Nomure
 
   alias Nomure.Node
-  alias Nomure.Schema.ParentNode
+  alias Nomure.Schema.{ParentNode, ChildrenNode}
 
   alias FDB.{Database, Cluster}
 
@@ -22,9 +22,32 @@ defmodule NomureTest do
         name: "Sif",
         password: "test",
         email: "test@test.com",
-        name@jp: "Shifu",
+        name@jp: "La biblia de los caidos",
         age: 20,
         gender: true
+      },
+      __node_relationships__: %{
+        books: [
+          %ChildrenNode{
+            __node_name__: "books",
+            __node_data__: %{
+              name: "La biblia de los caidos",
+              author: "Fernando Trujillo Sanz",
+              description: """
+              El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
+
+              La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
+
+              A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
+
+
+              Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
+              """,
+              # TODO dates!
+              release_date: "octubre de 2015"
+            }
+          }
+        ]
       }
     }
 
@@ -32,16 +55,42 @@ defmodule NomureTest do
 
     node_exist? = Node.node_exist?(uid, node_name)
 
-    # Database.transact(db, fn tr ->
-    #   [{_key, state} | _] =
-    #     :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+    lookup_result =
+      Database.transact(db, fn tr ->
+        [{_key, state} | _] =
+          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
 
-    #   range = FDB.KeySelectorRange.starts_with({"name", {:unicode_string, "Sif"}})
+        range = FDB.KeySelectorRange.starts_with({"name", {:unicode_string, "Sif"}})
 
-    #   FDB.Transaction.get_range(tr, range, %{coder: state.properties_index.coder})
-    #   |> Enum.to_list()
-    #   |> IO.inspect()
-    # end)
+        FDB.Transaction.get_range(tr, range, %{coder: state.properties_index.coder})
+        |> Enum.to_list()
+      end)
+
+    book_description =
+      Database.transact(db, fn tr ->
+        [{_key, state} | _] =
+          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+
+        FDB.Transaction.get(tr, {{"books", 2}, "description"}, %{coder: state.properties.coder})
+      end)
+
+    assert book_description ==
+             """
+             El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
+
+             La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
+
+             A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
+
+
+             Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
+             """
+
+    # TODO normalize result!
+    assert lookup_result == [
+             {{"name", {{:unicode_string, "Sif"}, {:unicode_string, "users"}, {:integer, 1}}},
+              "nil"}
+           ]
 
     assert node_exist? == true
   end

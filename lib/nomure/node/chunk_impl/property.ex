@@ -34,7 +34,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
 
   defp index_property(
          tr,
-         uid,
+         {node_name, uid},
          node_data,
          properties_index_dir
        ) do
@@ -46,7 +46,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
         {key, value} ->
           Utils.set_transaction(
             tr,
-            {key |> Atom.to_string(), value, uid},
+            {key |> Atom.to_string(), {value, {:unicode_string, node_name}, {:integer, uid}}},
             nil,
             properties_index_dir
           )
