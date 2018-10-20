@@ -32,16 +32,16 @@ defmodule NomureTest do
 
     node_exist? = Node.node_exist?(uid, node_name)
 
-    Database.transact(db, fn tr ->
-      [{_key, state} | _] =
-        :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+    # Database.transact(db, fn tr ->
+    #   [{_key, state} | _] =
+    #     :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
 
-      range = FDB.KeySelectorRange.starts_with({"name", {:unicode_string, "Sif"}})
+    #   range = FDB.KeySelectorRange.starts_with({"name", {:unicode_string, "Sif"}})
 
-      FDB.Transaction.get_range(tr, range, %{coder: state.properties_index.coder})
-      |> Enum.to_list()
-      |> IO.inspect()
-    end)
+    #   FDB.Transaction.get_range(tr, range, %{coder: state.properties_index.coder})
+    #   |> Enum.to_list()
+    #   |> IO.inspect()
+    # end)
 
     assert node_exist? == true
   end

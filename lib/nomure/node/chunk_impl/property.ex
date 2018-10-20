@@ -1,5 +1,4 @@
 defmodule Nomure.Node.ChunkImpl.Property do
-  alias Nomure.Schema.{ParentNode, ChildrenNode}
   alias Nomure.TransactionUtils, as: Utils
   alias Nomure.Database.State
 
@@ -30,10 +29,10 @@ defmodule Nomure.Node.ChunkImpl.Property do
   def index_properties(tr, uid, node_data, %State{
         properties_index: properties_index_dir
       }) do
-    insert_relationship(tr, uid, node_data, properties_index_dir)
+    index_property(tr, uid, node_data, properties_index_dir)
   end
 
-  defp insert_relationship(
+  defp index_property(
          tr,
          uid,
          node_data,
