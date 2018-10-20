@@ -1,17 +1,22 @@
 - [Foundation DB Notes](#foundation-db-notes)
 - [**Directories**](#directories)
+    - [*Conventions*](#conventions)
+- [Example data](#example-data)
+    - [A -(C)-> B](#a--c--b)
     - [*Node (Vertex)*](#node-vertex)
         - [**Properties**](#properties)
             - [*Serialize format*](#serialize-format)
             - [*E.g*](#eg)
         - [**Property indexes**](#property-indexes)
             - [*Serialize format*](#serialize-format)
-        - [**Out Edges**](#out-edges)
+        - [**Out Nodes**](#out-nodes)
             - [*Serialize format*](#serialize-format)
+            - [*E.g*](#eg)
         - [**Out Edges Indexes**](#out-edges-indexes)
             - [*Serialize format*](#serialize-format)
         - [**In Edges**](#in-edges)
             - [*Serialize format*](#serialize-format)
+            - [*E.g*](#eg)
     - [*Edge*](#edge)
         - [**Properties**](#properties)
             - [*Serialize format*](#serialize-format)
@@ -20,7 +25,7 @@
     - [Known Issues/Limitations](#known-issueslimitations)
         - [Recursive queries](#recursive-queries)
             - [Possible Solution/s:](#possible-solutions)
-        - [Pattern of large amounts of relationships](#pattern-of-large-amounts-of-relationships)
+        - [Pattern of large amounts of relationships (Secondary indexes etc)](#pattern-of-large-amounts-of-relationships-secondary-indexes-etc)
             - [Possible Solution/s:](#possible-solutions)
 
 # Foundation DB Notes
@@ -34,6 +39,12 @@ Nomure is built on top of FoundationDB, to understand the way of serializing thi
 [FoundationDB data modeling](https://apple.github.io/foundationdb/data-modeling.html)
 
 # **Directories**
+
+## *Conventions*
+`uid` : `(node_name, node_uid)`
+
+# Example data
+## A -(C)-> B
 
 ## *Node (Vertex)*
 
@@ -61,13 +72,17 @@ Indexes for the properties
 
 ---
 
-### **Out Edges** 
+### **Out Nodes** 
 
-Relationship properties, reference other nodes and the connection edges
+Relationship properties, reference other nodes 
 
 #### *Serialize format*
 
-`(uid, edge_name, edge_uid) = relation_node_uid` 
+`(uid, edge_name, uid) = ''` 
+
+#### *E.g* 
+
+Give me all the vertex that go from "A"
 
 ---
 
@@ -77,7 +92,7 @@ Indexing edges of the out edges
 
 #### *Serialize format*
 
-`(uid, edge_name, edge_property_name, value, edge_id) = out_relation_node_uid`
+`(uid, edge_name, edge_property_name, value, edge_id) = uid`
 
 ---
 
@@ -87,7 +102,13 @@ Reverse of the out edges, acts like and index for relationships
 
 #### *Serialize format*
 
-`(relation_node_uid, edge_name, uid) = edge_uid`
+`(uid, edge_name, uid) = ''`
+
+#### *E.g* 
+
+Give me all the vertex that go to "B"
+
+Give me all the vertex that go to "B" through "C"
 
 ---
 
@@ -112,11 +133,11 @@ By default all primitive (int, bool, date, enum) types are indexes except the `s
 
 - `integer` 
  
-    32 bits big endian
+    it could be 8, 16, 32, 64 bits depending the length of the integer
 
 - `float` 
  
-    64 bits big endian
+    32 bits big endian
 
 - `bool`
 
@@ -132,11 +153,11 @@ By default all primitive (int, bool, date, enum) types are indexes except the `s
 
 - `string` 
  
-    bit-string
+    unicode-string, it is compressed with zstd once the data reach certain length, length handled as a config value
 
 - `uid` 
 
-    128 bites little endian
+    64 bites little endian integer (on database), integer as a return value
 
 
 ## Known Issues/Limitations
@@ -148,7 +169,7 @@ In nested queries the childs might fetch parent nodes that are already loaded in
 #### Possible Solution/s:
 Use the Facebook Dataloader, it caches the requests over the query, is a good way solve this problem and improve the performance of the queries (even more if are computationally expensive, like sum of values, but at the moment of writing this Nomure doesn't support it)
 
-### Pattern of large amounts of relationships
+### Pattern of large amounts of relationships (Secondary indexes etc)
 
 One of the problems that Graph databases solves is analysis over large amounts of relationships, a good example is described on facebook (at https://code.fb.com/data-infrastructure/dragon-a-distributed-graph-query-engine/):
 

@@ -30,19 +30,19 @@ Of course Nomure can't be compared with the big guys like Neo4j, Dgraph or Drago
 
 The project contains various layers to make it work
 
-- Network:
+- ~~Network~~ (Out of the scope ATM):
 
-    Is the one encharged to get request from the internet and translate them into a
-    query, mutation or subscription to data retrival to the fdb graph layer
+    ~~Is the one encharged to get request from the internet and translate them into a
+    query, mutation or subscription to data retrival to the fdb graph layer~~
 
-    - GraphQL:
+    - ~~GraphQL:~~
 
-        The main network layer, everything you need about queries and mutations is here, it also is encharged of ensure the static types 
-        in the schema for adding them into the graphql layer
+        ~~The main network layer, everything you need about queries and mutations is here, it also is encharged of ensure the static types 
+        in the schema for adding them into the graphql layer~~
 
-    - openCypher:
+    - ~~openCypher:~~
         
-        Is an advanced network layer for more complex queries and data analisys, such as recommendation systems
+        ~~Is an advanced network layer for more complex queries and data analisys, such as recommendation systems~~
 
 - Graph:
 
@@ -52,25 +52,27 @@ The project contains various layers to make it work
 # Features/RoadMap
 
 - [ ] Property Values
-    - [ ] I18N Strings
+    - [x] ~~I18N Strings~~ (for this we need string index etc... To really have sense, otherwise is just a property with and @ and the language at the end)
     - [ ] Primitive types List
-    - [ ] Enums
-    - [ ] Dictionary
+    - [x] ~~Enums~~ (Is just a string, we do not check types)
+    - [x] ~~Dictionary~~ (Not in the roadmap)
 
 - [ ] Index
     - [ ] Datetime
-    - [ ] String
-    - [ ] List
-    - [ ] Map
+    - [x] String
+    - [x] Integer
+    - [x] Float
+    - [x] ~~List~~
+    - [x] ~~Map~~
 
 - [ ] Node implementation
-    - [ ] Set data
+    - [x] Set data
     - [ ] Get data
         - [ ] get_all
         - [ ] get_by_edge_name
         - [ ] get_by_fields
         - [ ] get_by_reverse
-    - [ ] Index property edges
+    - [x] Index property edges
     - [ ] Inverse Node support `(relation.uid, "edge_name", node.uid) = node_relation_edge.uid`
     - [ ] Update support
     - [ ] Delete support
@@ -81,9 +83,6 @@ The project contains various layers to make it work
     - [ ] Index property edges
     - [ ] Update support
     - [ ] Delete support
-
-- [ ] A better error handling: right now the errors are covered, but returning None making it difficult to know 
-why is the problem
 
 - [ ] Query support
 
@@ -98,7 +97,7 @@ why is the problem
         - [ ] `or`
 
     - [ ] `where_string`
-        - [ ] `starts_with` serialize the string a tuple and set as a key, and use key selector for it   
+        - [ ] `starts_with` serialize the string a tuple and set as a key, and use key selector for it
 
     - [ ] pagination support (cursor based)
         - [ ] `after` `Transaction.get_range(after_cursor, end, limit)`
@@ -119,25 +118,27 @@ why is the problem
 
     - [ ] query optimization
 
-- [ ] Network Protocol implementation
-    - [ ] GraphQL (standard query, mutation language) [this uses the connection 
-    features of GraphQL to make it easier to query graph data]
-        - [ ] SDL (GraphQL)
-            - [ ] Parsing
-            - [ ] Definition and exposing as custom schema for query and mutation
-    - [ ] Opengraph (complex query for things like recommendation engines etc)
+- [x] ~~Network Protocol implementation~~
+    - [ ] ~~GraphQL (standard query, mutation language) [this uses the connection 
+    features of GraphQL to make it easier to query graph data]~~
+        - [ ] ~~SDL (GraphQL)~~
+            - [ ] ~~ Parsing~~
+            - [ ] ~~Definition and exposing as custom schema for query and mutation~~
+    - [ ] ~~Opengraph (complex query for things like recommendation engines etc)~~
 
 - [ ] More tests
 
-- [ ] Ztandart data compression
+- [x] Ztandart data compression
 
     Depends on the use given by the serialization, but strings must be compressed
 
-- [ ] Data Serialization setup (single blob or chunk, this describes the nodes properties)
+- [x] ~~Data Serialization setup (single blob or chunk, this describes the nodes properties)~~
 
-    So far our problem is the node uids, right now are 64 bit and we need to duplicate them in order to chunk
+    ~~So far our problem is the node uids, right now are 64 bit and we need to duplicate them in order to chunk
     the data, this could lead to big numbers on storage (and possibly memory) since we add this to the indexes
-    and node relationships
+    and node relationships~~
+
+    I aimed to do the chuck only version, blob can cause large values which might be larguer than FDB limitation
 
     References [FoundationDB Forum](https://forums.foundationdb.org/t/best-practice-of-storing-structs-should-i-pack-or-store-fields-separately/425/5)
 
