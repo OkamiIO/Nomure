@@ -4,6 +4,7 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
   alias Nomure.Node
   alias Nomure.Database.State
   alias Nomure.Schema.ChildrenNode
+  alias Nomure.Node.ChunkImpl.Edge
 
   def insert_relationships(
         tr,
@@ -28,15 +29,25 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
          tr,
          uid,
          edge_name,
-         %ChildrenNode{__node_data__: value, __node_name__: relation_name},
+         %ChildrenNode{
+           __node_data__: value,
+           __node_name__: relation_name,
+           __edge_data__: edge_data
+         },
          %State{
-           out_nodes: out_nodes_dir
+           out_nodes: out_nodes_dir,
+           inverse_nodes: inverse_nodes_dir,
+           edges: edge_dir
          } = state
        )
        when is_integer(value) do
     if Node.node_exist?(tr, value, relation_name, state) do
       add_relationship(tr, uid, edge_name, value, out_nodes_dir)
-      # TODO Edge
+
+      index_relationship(tr, value, edge_name, uid, inverse_nodes_dir)
+
+      add_edge(tr, uid, value, edge_name, edge_data, edge_dir)
+
       value
     else
       raise Nomure.Error.NodeValueError, relation_uid: value, edge_name: edge_name
@@ -48,16 +59,21 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
          tr,
          uid,
          edge_name,
-         %ChildrenNode{} = relation,
+         %ChildrenNode{__edge_data__: edge_data} = relation,
          %State{
-           out_nodes: out_nodes_dir
+           out_nodes: out_nodes_dir,
+           inverse_nodes: inverse_nodes_dir,
+           edges: edge_dir
          } = state
        ) do
-    relation_uid = Node.create_node(tr, relation, state)
+    {relation_uid, _} = Node.create_node(tr, relation, state)
 
     add_relationship(tr, uid, edge_name, relation_uid, out_nodes_dir)
 
-    # TODO Edge
+    index_relationship(tr, relation_uid, edge_name, uid, inverse_nodes_dir)
+
+    add_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir)
+
     relation_uid
   end
 
@@ -68,5 +84,23 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
       nil,
       out_nodes_dir
     )
+  end
+
+  defp index_relationship(tr, relation_uid, edge_name, uid, in_nodes_dir) do
+    Utils.set_transaction(
+      tr,
+      {relation_uid, edge_name |> Atom.to_string(), uid},
+      nil,
+      in_nodes_dir
+    )
+  end
+
+  defp add_edge(_tr, _uid, _edge_name, _relation_uid, edge_data, _edge_dir)
+       when edge_data in [nil, %{}] do
+    nil
+  end
+
+  defp add_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir) do
+    Edge.insert_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir)
   end
 end

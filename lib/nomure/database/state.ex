@@ -5,9 +5,18 @@ defmodule Nomure.Database.State do
     :properties,
     :properties_index,
     :out_nodes,
-    :inverse_nodes
+    :inverse_nodes,
+    :edges
   ]
-  defstruct [:db, :serialize_as_blob, :properties, :properties_index, :out_nodes, :inverse_nodes]
+  defstruct [
+    :db,
+    :serialize_as_blob,
+    :properties,
+    :properties_index,
+    :out_nodes,
+    :inverse_nodes,
+    :edges
+  ]
 
   alias FDB.{Transaction, Database}
 
@@ -27,13 +36,20 @@ defmodule Nomure.Database.State do
 
   @serialize_as_blob Application.get_env(:nomure, :serialize_as_blob)
 
+  @property_key "p"
+  @property_index_key "pi"
+  @out_nodes_key "o"
+  @in_nodes_key "i"
+  @edges_key "e"
+
   @type t :: %__MODULE__{
           db: Database.t(),
           serialize_as_blob: boolean(),
           properties: Database.t(),
           properties_index: Database.t(),
           out_nodes: Database.t(),
-          inverse_nodes: Database.t()
+          inverse_nodes: Database.t(),
+          edges: Database.t()
         }
 
   def from(db, serialize_as_blob \\ @serialize_as_blob) do
@@ -44,14 +60,15 @@ defmodule Nomure.Database.State do
         FDB.Database.set_defaults(db, %{coder: get_properties_coder(db, serialize_as_blob)}),
       properties_index: FDB.Database.set_defaults(db, %{coder: get_properties_index_coder(db)}),
       out_nodes: FDB.Database.set_defaults(db, %{coder: get_out_nodes_coder(db)}),
-      inverse_nodes: FDB.Database.set_defaults(db, %{coder: get_inverse_nodes_coder(db)})
+      inverse_nodes: FDB.Database.set_defaults(db, %{coder: get_inverse_nodes_coder(db)}),
+      edges: FDB.Database.set_defaults(db, %{coder: get_edges_coder(db)})
     }
   end
 
   # Creates a properties directory, with the format
   # (uid, property_name) = property_value
   defp get_properties_coder(db, serialize_as_blob) do
-    props_dir = get_dir(db, "p")
+    props_dir = get_dir(db, @property_key)
 
     do_get_properties_coder(props_dir, serialize_as_blob)
   end
@@ -89,7 +106,7 @@ defmodule Nomure.Database.State do
   # Creates an index directory, with the format
   # (property_name, property_value, node_uid)
   defp get_properties_index_coder(db) do
-    index_dir = get_dir(db, "pi")
+    index_dir = get_dir(db, @property_index_key)
 
     Transaction.Coder.new(
       Subspace.new(
@@ -109,7 +126,7 @@ defmodule Nomure.Database.State do
   # Creates an out edges directory, with the format
   # (uid, edge_name, relation_node_uid)
   defp get_out_nodes_coder(db) do
-    inverse_dir = get_dir(db, "o")
+    inverse_dir = get_dir(db, @out_nodes_key)
 
     Transaction.Coder.new(
       Subspace.new(
@@ -131,7 +148,7 @@ defmodule Nomure.Database.State do
   # Creates an in edges directory, with the format
   # (relation_node_uid, edge_name, uid)
   defp get_inverse_nodes_coder(db) do
-    inverse_dir = get_dir(db, "in")
+    inverse_dir = get_dir(db, @in_nodes_key)
 
     Transaction.Coder.new(
       Subspace.new(
@@ -146,6 +163,28 @@ defmodule Nomure.Database.State do
         })
       ),
       # dummy_value, nil
+      GraphValue.new()
+    )
+  end
+
+  defp get_edges_coder(db) do
+    inverse_dir = get_dir(db, @edges_key)
+
+    Transaction.Coder.new(
+      Subspace.new(
+        inverse_dir,
+        Tuple.new({
+          # edge_name
+          ByteString.new(),
+          # node_uid
+          get_uid_coder(),
+          # relation_uid
+          get_uid_coder(),
+          # edge_property_name
+          ByteString.new()
+        })
+      ),
+      # edge property value
       GraphValue.new()
     )
   end

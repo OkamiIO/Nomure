@@ -45,13 +45,16 @@ defmodule NomureTest do
               """,
               # TODO dates!
               release_date: "octubre de 2015"
+            },
+            __edge_data__: %{
+              since: "20-10-2018"
             }
           }
         ]
       }
     }
 
-    {node_name, uid} = Node.create_node(data)
+    {{node_name, uid}, relation_uids} = Node.create_node(data)
 
     node_exist? = Node.node_exist?(uid, node_name)
 
@@ -73,6 +76,18 @@ defmodule NomureTest do
 
         FDB.Transaction.get(tr, {{"books", 2}, "description"}, %{coder: state.properties.coder})
       end)
+
+    edge_data =
+      Database.transact(db, fn tr ->
+        [{_key, state} | _] =
+          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+
+        FDB.Transaction.get(tr, {"books", {"users", 1}, {"books", 2}, "since"}, %{
+          coder: state.edges.coder
+        })
+      end)
+
+    assert edge_data == "20-10-2018"
 
     assert book_description ==
              """

@@ -17,11 +17,14 @@ defmodule Nomure.Node.ChunkImpl do
     Property.insert_properties(tr, uid, node_data, state)
     Property.index_properties(tr, uid, node_data, state)
 
-    if relationships not in [nil, []] do
-      Vertex.insert_relationships(tr, uid, relationships, state)
-    end
+    relation_uids =
+      if relationships not in [nil, []] do
+        Vertex.insert_relationships(tr, uid, relationships, state)
+      else
+        %{}
+      end
 
-    uid
+    {uid, relation_uids}
   end
 
   # Children only insert properties
@@ -35,7 +38,7 @@ defmodule Nomure.Node.ChunkImpl do
     Property.insert_properties(tr, uid, node_data, state)
     Property.index_properties(tr, uid, node_data, state)
 
-    uid
+    {uid, %{}}
   end
 
   defp get_new_uid(tr, %{__node_name__: node_name}) do

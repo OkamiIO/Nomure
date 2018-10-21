@@ -12,6 +12,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
       node_data,
       fn
         {:uid, _value} ->
+          # TODO is this really necesary? I mean we always override uid at the end of the function...
           nil
 
         {key, value} ->
@@ -56,7 +57,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
 
   # get the indexable properties
   # for the moment the only valid index properties are
-  # integer, float, boolean and user defined string length (default 16)
+  # integer, float, boolean and user defined string length
   # be careful, don't set string size too big, because will cause performance problems
   defp get_indexable_properties(node_data) do
     node_data
