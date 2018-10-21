@@ -62,8 +62,8 @@ The project contains various layers to make it work
     - [x] String
     - [x] Integer
     - [x] Float
-    - [x] ~~List~~
-    - [x] ~~Map~~
+    - [ ] List
+    - [x] ~~Map~~ (just use a node :D)
 
 - [ ] Node implementation
     - [x] Set data
@@ -73,12 +73,12 @@ The project contains various layers to make it work
         - [ ] get_by_fields
         - [ ] get_by_reverse
     - [x] Index property edges
-    - [ ] Inverse Node support `(relation.uid, "edge_name", node.uid) = node_relation_edge.uid`
+    - [x] Inverse Node support `(relation.uid, "edge_name", node.uid) = node_relation_edge.uid`
     - [ ] Update support
     - [ ] Delete support
 
 - [ ] Edge implementation
-    - [ ] Set data
+    - [x] Set data
     - [ ] Get data
     - [ ] Index property edges
     - [ ] Update support
