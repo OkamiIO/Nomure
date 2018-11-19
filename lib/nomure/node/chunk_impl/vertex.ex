@@ -30,9 +30,9 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
          uid,
          edge_name,
          %ChildrenNode{
-           __node_data__: value,
-           __node_name__: relation_name,
-           __edge_data__: edge_data
+           node_data: value,
+           node_name: relation_name,
+           edge_data: edge_data
          },
          %State{
            out_nodes: out_nodes_dir,
@@ -59,7 +59,7 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
          tr,
          uid,
          edge_name,
-         %ChildrenNode{__edge_data__: edge_data} = relation,
+         %ChildrenNode{edge_data: edge_data} = relation,
          %State{
            out_nodes: out_nodes_dir,
            inverse_nodes: inverse_nodes_dir,

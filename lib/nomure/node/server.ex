@@ -42,9 +42,7 @@ defmodule Nomure.Node.Server do
     Nomure.Node.ChunkImpl
   end
 
-  defp get_state() do
-    [{_key, state} | _] = :ets.lookup(:database_state, TransactionUtils.get_database_state_key())
-
-    state
+  def get_state() do
+    Nomure.Database.get_state()
   end
 end

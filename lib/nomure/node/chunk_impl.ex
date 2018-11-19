@@ -9,7 +9,7 @@ defmodule Nomure.Node.ChunkImpl do
 
   def insert_data(
         tr,
-        %ParentNode{__node_data__: node_data, __node_relationships__: relationships} = node,
+        %ParentNode{node_data: node_data, node_relationships: relationships} = node,
         %State{} = state
       ) do
     uid = get_new_uid(tr, node)
@@ -30,7 +30,7 @@ defmodule Nomure.Node.ChunkImpl do
   # Children only insert properties
   def insert_data(
         tr,
-        %ChildrenNode{__node_data__: node_data} = node,
+        %ChildrenNode{node_data: node_data} = node,
         %State{} = state
       ) do
     uid = get_new_uid(tr, node)
@@ -41,7 +41,7 @@ defmodule Nomure.Node.ChunkImpl do
     {uid, %{}}
   end
 
-  defp get_new_uid(tr, %{__node_name__: node_name}) do
+  defp get_new_uid(tr, %{node_name: node_name}) do
     uid = Utils.add_and_get_counter(tr, @uid_space)
     {node_name, uid}
   end

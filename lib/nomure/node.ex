@@ -1,5 +1,5 @@
 defmodule Nomure.Node do
-  alias Nomure.Node.Server
+  alias Nomure.Node.{Server, Query}
   alias Nomure.Database.State, as: DatabaseState
   alias Nomure.TransactionUtils
 
@@ -16,7 +16,15 @@ defmodule Nomure.Node do
 
   defdelegate create_node(tr, data, state), to: Server
 
-  defdelegate node_exist?(ui, node_name), to: Server
+  defdelegate node_exist?(uid, node_name), to: Server
 
-  defdelegate node_exist?(tr, ui, node_name, state), to: Server
+  defdelegate node_exist?(tr, uid, node_name, state), to: Server
+
+  defdelegate query(parent_node), to: Query
+
+  # get_node_uid_by(property_name, value, fields \\ nil) # if nil just rreturn the id, if not return the selected stuff
+
+  # select(uid, fields)
+
+  # get_edge(uid, uid, edge_property)
 end

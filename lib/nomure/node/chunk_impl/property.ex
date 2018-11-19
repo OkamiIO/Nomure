@@ -12,7 +12,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
       node_data,
       fn
         {:uid, _value} ->
-          # TODO is this really necesary? I mean we always override uid at the end of the function...
+          # TODO is this really necesary? We always override uid at the end of the function...
           nil
 
         {key, value} ->

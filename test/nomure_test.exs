@@ -4,10 +4,11 @@ defmodule NomureTest do
 
   alias Nomure.Node
   alias Nomure.Schema.{ParentNode, ChildrenNode}
+  alias Nomure.Schema.Query.{ParentQuery, ChildrenQuery}
 
   alias FDB.{Database, Cluster}
 
-  test "node exist?" do
+  test "set data" do
     :ok = FDB.start(510)
 
     db =
@@ -17,8 +18,8 @@ defmodule NomureTest do
     Node.new(db)
 
     data = %ParentNode{
-      __node_name__: "users",
-      __node_data__: %{
+      node_name: "users",
+      node_data: %{
         name: "Sif",
         password: "test",
         email: "test@test.com",
@@ -26,11 +27,11 @@ defmodule NomureTest do
         age: 20,
         gender: true
       },
-      __node_relationships__: %{
+      node_relationships: %{
         books: [
           %ChildrenNode{
-            __node_name__: "books",
-            __node_data__: %{
+            node_name: "books",
+            node_data: %{
               name: "La biblia de los caidos",
               author: "Fernando Trujillo Sanz",
               description: """
@@ -46,7 +47,7 @@ defmodule NomureTest do
               # TODO dates!
               release_date: "octubre de 2015"
             },
-            __edge_data__: %{
+            edge_data: %{
               since: "20-10-2018"
             }
           }
@@ -54,14 +55,23 @@ defmodule NomureTest do
       }
     }
 
-    {{node_name, uid}, relation_uids} = Node.create_node(data)
+    {{node_name, uid}, _relation_uids} = Node.create_node(data)
 
     node_exist? = Node.node_exist?(uid, node_name)
 
     lookup_result =
       Database.transact(db, fn tr ->
-        [{_key, state} | _] =
-          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+        %ParentQuery{
+          node_name: "users",
+          where: [name: "Sif"],
+          select: [
+            :id
+          ]
+        }
+
+        # [%{uid: 1}]
+
+        state = Nomure.Database.get_state()
 
         range = FDB.KeySelectorRange.starts_with({"name", {:unicode_string, "Sif"}})
 
@@ -70,17 +80,34 @@ defmodule NomureTest do
       end)
 
     book_description =
-      Database.transact(db, fn tr ->
-        [{_key, state} | _] =
-          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
-
-        FDB.Transaction.get(tr, {{"books", 2}, "description"}, %{coder: state.properties.coder})
-      end)
+      Node.query(%ParentQuery{
+        node_name: "books",
+        where: [id: 2],
+        select: [
+          :description,
+          :author
+          # friends in common query! use MapSet.intersection(map_set, map_set)
+          # friends: %{where: %{friends: %{intersect: :@friends}}}
+        ]
+      })
 
     edge_data =
       Database.transact(db, fn tr ->
-        [{_key, state} | _] =
-          :ets.lookup(:database_state, Nomure.TransactionUtils.get_database_state_key())
+        state = Nomure.Database.get_state()
+
+        %ParentQuery{
+          node_name: "users",
+          where: [id: 1],
+          select: [
+            books: %ChildrenQuery{
+              node_name: "books",
+              # where: [id: 2],
+              edges: [:since]
+            }
+          ]
+        }
+
+        # {books: [%{since: "date"}]}
 
         FDB.Transaction.get(tr, {"books", {"users", 1}, {"books", 2}, "since"}, %{
           coder: state.edges.coder
@@ -90,16 +117,19 @@ defmodule NomureTest do
     assert edge_data == "20-10-2018"
 
     assert book_description ==
-             """
-             El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
+             %{
+               author: "Fernando Trujillo Sanz",
+               description: """
+               El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
 
-             La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
+               La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
 
-             A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
+               A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
 
 
-             Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
-             """
+               Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
+               """
+             }
 
     # TODO normalize result!
     assert lookup_result == [
@@ -110,61 +140,41 @@ defmodule NomureTest do
     assert node_exist? == true
   end
 
-  test "get data to fdb" do
-    # %{
-    #   __node_name__: "user",
-    #   name: nil,
-    #   email: nil,
-    #   password: nil,
-    #   books: %{
-    #     page_info: nil,
-    #     aggregate: nil,
-    #     edges: %{
-    #       __node_name__: "book",
-    #       __function__: %{
-    #         where: %{
-    #           edge_score: "10",
-    #           node_release_date: "2018"
-    #         }
-    #       },
-    #       score: nil,
-    #       node: %{
-    #         name: [lang: :es],
-    #         release_date: nil,
-    #         lovers_count: nil
-    #       }
-    #     }
-    #   }
-    # }
+  test "get data" do
+    %ParentQuery{
+      node_name: "user",
+      where: [id: 1],
+      select: [
+        :name,
+        :email,
+        :password,
+        books: %ChildrenQuery{
+          node_name: "book",
+          pagination: %{first: 20},
+          select: [:name, :description],
+          edges: [:since]
+        }
+      ]
+    }
 
-    assert true == true
-  end
-
-  test "set data to fdb" do
-    # data = %{
-    #   __node_name__: "user",
-    #   __node_data__: %{
-    #     name: "Sif",
-    #     email: "example@example.com",
-    #     password: "super_strong",
-    #     books: [
-    #       %{
-    #         __node_name__: "book",
-    #         __edge_data__: %{score: "10"},
-    #         __node_data__: %{
-    #           name: "La biblia de los caidos",
-    #           # provisional just for reference
-    #           release_date: "2018"
-    #           # can't set lovers_count since is count property
-    #         }
-    #       }
-    #     ]
-    #   }
-    # }
-
-    # data.__node_data__
-    # |> Enum.filter(fn {_key, value} -> !is_list(value) end)
-    # |> Map.new()
+    %{
+      name: "Sif",
+      email: "bla",
+      password: "bla",
+      books: %{
+        edges: %{
+          cursor: 2,
+          sinde: "date",
+          node: %{name: "La biblia de los caidos", description: "long description"}
+        },
+        page_info: %{
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: 2,
+          endCursor: 2
+        }
+      }
+    }
 
     assert true == true
   end

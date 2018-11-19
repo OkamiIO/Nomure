@@ -30,7 +30,11 @@ Of course Nomure can't be compared with the big guys like Neo4j, Dgraph or Drago
 
 The project contains various layers to make it work
 
-- ~~Network~~ (Out of the scope ATM):
+- Graph:
+
+    The graph layer for FDB, for specific details, check out `IMPLEMENTATION.md` 
+
+- ~~Network~~ (Out of the scope ATM, maybe possible in a long term):
 
     ~~Is the one encharged to get request from the internet and translate them into a
     query, mutation or subscription to data retrival to the fdb graph layer~~
@@ -44,103 +48,6 @@ The project contains various layers to make it work
         
         ~~Is an advanced network layer for more complex queries and data analisys, such as recommendation systems~~
 
-- Graph:
-
-    The graph layer for FDB, for specific details, check out `IMPLEMENTATION.md` 
-
-
-# Features/RoadMap
-
-- [ ] Property Values
-    - [x] ~~I18N Strings~~ (for this we need string index etc... To really have sense, otherwise is just a property with and @ and the language at the end)
-    - [ ] Primitive types List
-    - [x] ~~Enums~~ (Is just a string, we do not check types)
-    - [x] ~~Dictionary~~ (Not in the roadmap)
-
-- [ ] Index
-    - [ ] Datetime
-    - [x] String
-    - [x] Integer
-    - [x] Float
-    - [ ] List
-    - [x] ~~Map~~ (just use a node :D)
-
-- [ ] Node implementation
-    - [x] Set data
-    - [ ] Get data
-        - [ ] get_all
-        - [ ] get_by_edge_name
-        - [ ] get_by_fields
-        - [ ] get_by_reverse
-    - [x] Index property edges
-    - [x] Inverse Node support `(relation.uid, "edge_name", node.uid) = node_relation_edge.uid`
-    - [ ] Update support
-    - [ ] Delete support
-
-- [ ] Edge implementation
-    - [x] Set data
-    - [ ] Get data
-    - [ ] Index property edges
-    - [ ] Update support
-    - [ ] Delete support
-
-- [ ] Query support
-
-    - [ ] `where` 
-        - [ ] Datetime storage `{ year, month, day, seconds }`
-        - [ ] `>` `KeySelector.first_greater_than(key)`
-        - [ ] `<` `KeySelector.last_less_than(key)`
-        - [ ] `==` `get_by_function(property, value, function = Function.equal)`
-        - [ ] `>=` `KeySelector.first_greater_or_equal(key)`
-        - [ ] `<=` `KeySelector.last_less_or_equal(key)`
-        - [ ] `and`
-        - [ ] `or`
-
-    - [ ] `where_string`
-        - [ ] `starts_with` serialize the string a tuple and set as a key, and use key selector for it
-
-    - [ ] pagination support (cursor based)
-        - [ ] `after` `Transaction.get_range(after_cursor, end, limit)`
-        - [ ] `before` `Transaction.get_range(before_cursor, end, limit, reverse=True)`
-        - [ ] `limit`
-        - [ ] `first` `Transaction.get_range(start, end, limit=first)`
-        - [ ] `count`
-
-    - [ ] sorting
-        - [ ] `order_asc` 
-        - [ ] `order_des`
-
-    - [ ] reverse node
-    
-    - [ ] functions
-        - [ ] `min` `Transaction.get_range(start, end, limit=1, reverse=True)`
-        - [ ] `max` `Transaction.get_range(start, end, limit=1)`
-
-    - [ ] query optimization
-
-- [x] ~~Network Protocol implementation~~
-    - [ ] ~~GraphQL (standard query, mutation language) [this uses the connection 
-    features of GraphQL to make it easier to query graph data]~~
-        - [ ] ~~SDL (GraphQL)~~
-            - [ ] ~~ Parsing~~
-            - [ ] ~~Definition and exposing as custom schema for query and mutation~~
-    - [ ] ~~Opengraph (complex query for things like recommendation engines etc)~~
-
-- [ ] More tests
-
-- [x] Ztandart data compression
-
-    Depends on the use given by the serialization, but strings must be compressed
-
-- [x] ~~Data Serialization setup (single blob or chunk, this describes the nodes properties)~~
-
-    ~~So far our problem is the node uids, right now are 64 bit and we need to duplicate them in order to chunk
-    the data, this could lead to big numbers on storage (and possibly memory) since we add this to the indexes
-    and node relationships~~
-
-    I aimed to do the chuck only version, blob can cause large values which might be larguer than FDB limitation
-
-    References [FoundationDB Forum](https://forums.foundationdb.org/t/best-practice-of-storing-structs-should-i-pack-or-store-fields-separately/425/5)
 
 ## Installation
 

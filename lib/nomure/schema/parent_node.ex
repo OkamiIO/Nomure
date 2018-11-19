@@ -1,4 +1,4 @@
 defmodule Nomure.Schema.ParentNode do
-  @enforce_keys [:__node_name__, :__node_data__]
-  defstruct [:__node_name__, :__node_data__, :__node_relationships__]
+  @enforce_keys [:node_name, :node_data]
+  defstruct [:node_name, :node_data, :node_relationships]
 end

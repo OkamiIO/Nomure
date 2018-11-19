@@ -1,7 +1,6 @@
 defmodule Nomure.Database.State do
   @enforce_keys [
     :db,
-    :serialize_as_blob,
     :properties,
     :properties_index,
     :out_nodes,
@@ -10,7 +9,6 @@ defmodule Nomure.Database.State do
   ]
   defstruct [
     :db,
-    :serialize_as_blob,
     :properties,
     :properties_index,
     :out_nodes,
@@ -26,15 +24,12 @@ defmodule Nomure.Database.State do
     ByteString,
     Subspace,
     Dynamic,
-    NestedTuple,
-    Identity
+    NestedTuple
   }
 
   alias FDB.Directory
 
   alias Nomure.Database.Coder.GraphValue
-
-  @serialize_as_blob Application.get_env(:nomure, :serialize_as_blob)
 
   @property_key "p"
   @property_index_key "pi"
@@ -44,7 +39,6 @@ defmodule Nomure.Database.State do
 
   @type t :: %__MODULE__{
           db: Database.t(),
-          serialize_as_blob: boolean(),
           properties: Database.t(),
           properties_index: Database.t(),
           out_nodes: Database.t(),
@@ -52,12 +46,10 @@ defmodule Nomure.Database.State do
           edges: Database.t()
         }
 
-  def from(db, serialize_as_blob \\ @serialize_as_blob) do
+  def from(db) do
     %__MODULE__{
       db: db,
-      serialize_as_blob: serialize_as_blob,
-      properties:
-        FDB.Database.set_defaults(db, %{coder: get_properties_coder(db, serialize_as_blob)}),
+      properties: FDB.Database.set_defaults(db, %{coder: get_properties_coder(db)}),
       properties_index: FDB.Database.set_defaults(db, %{coder: get_properties_index_coder(db)}),
       out_nodes: FDB.Database.set_defaults(db, %{coder: get_out_nodes_coder(db)}),
       inverse_nodes: FDB.Database.set_defaults(db, %{coder: get_inverse_nodes_coder(db)}),
@@ -67,27 +59,9 @@ defmodule Nomure.Database.State do
 
   # Creates a properties directory, with the format
   # (uid, property_name) = property_value
-  defp get_properties_coder(db, serialize_as_blob) do
+  defp get_properties_coder(db) do
     props_dir = get_dir(db, @property_key)
 
-    do_get_properties_coder(props_dir, serialize_as_blob)
-  end
-
-  defp do_get_properties_coder(props_dir, true) do
-    Transaction.Coder.new(
-      Subspace.new(
-        props_dir,
-        Tuple.new({
-          # node_uid
-          get_uid_coder()
-        })
-      ),
-      # node_properties
-      Identity.new()
-    )
-  end
-
-  defp do_get_properties_coder(props_dir, false) do
     Transaction.Coder.new(
       Subspace.new(
         props_dir,
