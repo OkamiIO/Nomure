@@ -42,7 +42,9 @@ Nomure is built on top of FoundationDB, to understand the way it works, check ou
 # **Directories**
 
 ## *Conventions*
+
 `node_name` : `string` describing the name of the node
+
 `node_uid` : global autoincremented unique `integer` id
 
 `uid` : `(node_name, node_uid)`
