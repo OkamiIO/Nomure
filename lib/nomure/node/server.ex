@@ -1,13 +1,9 @@
 defmodule Nomure.Node.Server do
-  alias FDB.{Database}
-
   alias Nomure.Database.State
   alias Nomure.TransactionUtils
 
   def create_node(data) do
-    state = get_state()
-
-    Database.transact(state.db, fn tr ->
+    TransactionUtils.transact(fn tr, state ->
       create_node(tr, data, state)
     end)
   end
@@ -17,9 +13,7 @@ defmodule Nomure.Node.Server do
   end
 
   def node_exist?(uid, node_name) do
-    state = get_state()
-
-    Database.transact(state.db, fn tr ->
+    TransactionUtils.transact(fn tr, state ->
       node_exist?(tr, uid, node_name, state)
     end)
   end
@@ -32,17 +26,12 @@ defmodule Nomure.Node.Server do
           properties: props_dir
         }
       ) do
-    {:ok, _tr, result} =
-      TransactionUtils.get_transaction(tr, {{node_name, uid}, "uid"}, props_dir)
+    {:ok, _tr, result} = TransactionUtils.get_transaction(tr, {{node_name, uid}, "id"}, props_dir)
 
     result != nil
   end
 
   def get_impl() do
     Nomure.Node.ChunkImpl
-  end
-
-  def get_state() do
-    Nomure.Database.get_state()
   end
 end

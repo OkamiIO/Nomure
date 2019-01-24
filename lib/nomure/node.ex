@@ -1,14 +1,12 @@
 defmodule Nomure.Node do
-  alias Nomure.Node.{Server, Query}
+  alias Nomure.Node.{Server}
+  alias Nomure.Schema.Query
   alias Nomure.Database.State, as: DatabaseState
-  alias Nomure.TransactionUtils
 
   def new(db) do
-    :ets.new(:database_state, [:named_table, read_concurrency: true])
-
-    :ets.insert(
-      :database_state,
-      {TransactionUtils.get_database_state_key(), DatabaseState.from(db)}
+    :persistent_term.put(
+      Nomure.TransactionUtils.get_database_state_key(),
+      DatabaseState.from(db)
     )
   end
 

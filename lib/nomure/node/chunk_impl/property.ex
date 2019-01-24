@@ -11,16 +11,16 @@ defmodule Nomure.Node.ChunkImpl.Property do
     Enum.each(
       node_data,
       fn
-        {:uid, _value} ->
+        {:id, _value} ->
           # TODO is this really necesary? We always override uid at the end of the function...
-          nil
+          :ok
 
         {key, value} ->
           Utils.set_transaction(tr, {uid, key |> Atom.to_string()}, value, properties_dir)
       end
     )
 
-    Utils.set_transaction(tr, {uid, "uid"}, nil, properties_dir)
+    Utils.set_transaction(tr, {uid, "id"}, nil, properties_dir)
   end
 
   def index_properties(_tr, _uid, [], _state) do
@@ -47,7 +47,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
         {key, value} ->
           Utils.set_transaction(
             tr,
-            {key |> Atom.to_string(), {value, {:unicode_string, node_name}, {:integer, uid}}},
+            {node_name, key |> Atom.to_string(), {value, {:integer, uid}}},
             nil,
             properties_index_dir
           )

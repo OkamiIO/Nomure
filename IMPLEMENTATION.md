@@ -1,36 +1,37 @@
 - [Foundation DB Notes](#foundation-db-notes)
 - [**Directories**](#directories)
-    - [*Conventions*](#conventions)
+  - [*Conventions*](#conventions)
 - [Example data](#example-data)
-    - [A -(C)-> B](#a--c--b)
-    - [*Node (Vertex)*](#node-vertex)
-        - [**Properties**](#properties)
-            - [*Serialize format*](#serialize-format)
-            - [*E.g*](#eg)
-        - [**Property indexes**](#property-indexes)
-            - [*Serialize format*](#serialize-format)
-        - [**Out Nodes**](#out-nodes)
-            - [*Serialize format*](#serialize-format)
-            - [*E.g*](#eg)
-        - [**Out Edges Indexes**](#out-edges-indexes)
-            - [*Serialize format*](#serialize-format)
-        - [**In Edges**](#in-edges)
-            - [*Serialize format*](#serialize-format)
-            - [*E.g*](#eg)
-    - [*Edge*](#edge)
-        - [**Properties**](#properties)
-            - [*Serialize format*](#serialize-format)
-    - [*Implementation Notes*](#implementation-notes)
-        - [**Primitives serialization**](#primitives-serialization)
-    - [Known Issues/Limitations](#known-issueslimitations)
-        - [Recursive queries](#recursive-queries)
-            - [Possible Solution/s:](#possible-solutions)
-        - [Pattern of large amounts of relationships (Secondary indexes etc)](#pattern-of-large-amounts-of-relationships-secondary-indexes-etc)
-            - [Possible Solution/s:](#possible-solutions)
+  - [A -(C)-> B](#a--c--b)
+  - [*Node (Vertex)*](#node-vertex)
+    - [**Properties**](#properties)
+      - [*Serialize format*](#serialize-format)
+      - [*E.g*](#eg)
+    - [**Property indexes**](#property-indexes)
+      - [*Serialize format*](#serialize-format-1)
+      - [*E.g*](#eg-1)
+    - [**Out Nodes**](#out-nodes)
+      - [*Serialize format*](#serialize-format-2)
+      - [*E.g*](#eg-2)
+    - [**Out Edges Indexes**](#out-edges-indexes)
+      - [*Serialize format*](#serialize-format-3)
+    - [**In Edges**](#in-edges)
+      - [*Serialize format*](#serialize-format-4)
+      - [*E.g*](#eg-3)
+  - [*Edge*](#edge)
+    - [**Properties**](#properties-1)
+      - [*Serialize format*](#serialize-format-5)
+  - [*Implementation Notes*](#implementation-notes)
+    - [**Primitives serialization**](#primitives-serialization)
+  - [Known Issues/Limitations](#known-issueslimitations)
+    - [Recursive queries](#recursive-queries)
+      - [Possible Solution/s:](#possible-solutions)
+    - [Pattern of large amounts of relationships (Secondary indexes etc)](#pattern-of-large-amounts-of-relationships-secondary-indexes-etc)
+      - [Possible Solution/s:](#possible-solutions-1)
 
 # Foundation DB Notes
 
-Nomure is built on top of FoundationDB, to understand the way of serializing things, check out the links for more info
+Nomure is built on top of FoundationDB, to understand the way it works, check out the links for more info
 
 [FoundationDB architecture](https://apple.github.io/foundationdb/architecture.html)
 
@@ -41,10 +42,16 @@ Nomure is built on top of FoundationDB, to understand the way of serializing thi
 # **Directories**
 
 ## *Conventions*
+`node_name` : `string` describing the name of the node
+`node_uid` : global autoincremented unique `integer` id
+
 `uid` : `(node_name, node_uid)`
 
 # Example data
+
 ## A -(C)-> B
+
+Where `A` and `B` are nodes/vertex and `C` is an Edge
 
 ## *Node (Vertex)*
 
@@ -58,17 +65,21 @@ Primitive types of the Node
 
 #### *E.g* 
 
-An User datamodel, the primitive properties could be `age`, `name`, `birthday`
+An User datamodel, the primitive properties could be `age`, `name`, `birthday` and their respective value
 
 ---
 
 ### **Property indexes**
 
-Indexes for the properties
+Secondary property index
 
 #### *Serialize format*
 
-`(property_name, value, uid) = ''`
+`(node_name, property_name, value, node_uid) = ''`
+
+#### *E.g* 
+
+Give me all nodes of the node name `A` with the property name `y` and the value `z`
 
 ---
 
@@ -143,12 +154,21 @@ By default all primitive (int, bool, date, enum) types are indexes except the `s
 
     single byte
 
-- `date` 
+- `datetime` 
  
     tuple with the format `{year, month, day, hour, minute, second}`
 
-- `enum` 
+- `date` 
  
+    tuple with the format `{year, month, day}`
+
+- `time` 
+ 
+    tuple with the format `{hour, minute, second}`
+
+
+- `enum` 
+
     bit-string
 
 - `string` 
@@ -157,14 +177,14 @@ By default all primitive (int, bool, date, enum) types are indexes except the `s
 
 - `uid` 
 
-    64 bites little endian integer (on database), integer as a return value
+    tuple encoded `(string, integer)`
 
 
 ## Known Issues/Limitations
 
 ### Recursive queries
 
-In nested queries the childs might fetch parent nodes that are already loaded in the first steps of query request, *that's a big problem for performance and resource usage*.
+In nested queries the childs might fetch parent nodes that are already loaded in the first steps of query request, *that could be a big problem for performance and resource usage*.
 
 #### Possible Solution/s:
 Use the Facebook Dataloader, it caches the requests over the query, is a good way solve this problem and improve the performance of the queries (even more if are computationally expensive, like sum of values, but at the moment of writing this Nomure doesn't support it)
@@ -173,11 +193,11 @@ Use the Facebook Dataloader, it caches the requests over the query, is a good wa
 
 One of the problems that Graph databases solves is analysis over large amounts of relationships, a good example is described on facebook (at https://code.fb.com/data-infrastructure/dragon-a-distributed-graph-query-engine/):
 
-Suppose we follow a really famous user, with millions of followers and I want to know which of my friends follow that person, **this is super expensive in the way that Nomure works right now**, it can be distributed operations over a range of data (sharding?), due to the nature of Elixir and FDB this is "easy", but is an advance topic to cover.
+Suppose we follow a really famous user, with millions of followers and I want to know which of my friends follow that person, **this is super expensive if the data is huge in the way that Nomure works right now**, it can be distributed operations over a range of data (sharding?), due to the nature of Elixir and FDB this is "easy", but is an advance topic to cover.
 
 This problem is simple if I have a few friends, in that case I can iterate over my friends and check if the user key contains my friends and get the result, but if I have millions of friends as the user does it became really expensive with the methods we have now.
 
-There are a lot of graph alorithms out there, but the real chanllenge is to implement then with the use of FDB.
+There are a lot of graph algorithms out there, but the real challenge is to implement then with the use of FDB.
 
 #### Possible Solution/s:
 Not planned yet, **For the moment** this functionality is out of the scope for Nomure

@@ -80,7 +80,7 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
   defp add_relationship(tr, uid, edge_name, relation_uid, out_nodes_dir) do
     Utils.set_transaction(
       tr,
-      {uid, edge_name |> Atom.to_string(), relation_uid},
+      {uid, edge_name |> to_string(), relation_uid},
       nil,
       out_nodes_dir
     )
@@ -89,7 +89,7 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
   defp index_relationship(tr, relation_uid, edge_name, uid, in_nodes_dir) do
     Utils.set_transaction(
       tr,
-      {relation_uid, edge_name |> Atom.to_string(), uid},
+      {relation_uid, edge_name |> to_string(), uid},
       nil,
       in_nodes_dir
     )

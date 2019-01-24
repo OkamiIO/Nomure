@@ -1,10 +1,8 @@
 # Nomure
 
-# Welcome to the Nomure (オオカミ*の群れ*) database repository!
+# Welcome to the Nomure (オオカミ*の群れ*) repository!
 
 This is the main database we use at [Okami](https://www.okami.io)!
-
-It's main purpose is to server as a main database just like you use Postgres or Mysql, but as a Graph data structure
 
 The repo acts as a Graph layer for [FoundationDB](https://www.foundationdb.org)!
 
@@ -13,40 +11,20 @@ The repo acts as a Graph layer for [FoundationDB](https://www.foundationdb.org)!
 
 # Motivation
 
-Graph databases are amazing, from the first time that I knew of its operation and use I was fascinated, but most implementations of the Graph databases where used at a big scale on companies like Google and Facebook, with it's use beign more for analisys than storage.
+Graph databases are amazing, from the first time that I knew of its features and use I was fascinated, but most implementations of them were used at a big scale on companies like Google and Facebook, with its use being more for analysis than for storage.
 
-The open source options need really computational (and cost) expensive storages like Cassandra, Big Table, custom in memory etc... (Janus Graph, Titan, Neo4J, Datastax. Neptune etc...) with the purpose of being used at large scale projects for analysis and again not for storage (due to limitations like ACID and transactions)
+I wanted to have single database that could behave like a graph database, but that it had all the guarantees of a database like Postgres, was cheap and easy to scale, but in the world of graph databases it is really difficult to find all that in one place... Until I came across FoundationDB and from there Nomure was born.
 
-I wanted something like Posgres (there is agensgraph, but the documentaion is messy and they are focus on big companies as well) that I can use in my small project with limited in economic resources, the only option was Dgraph, an startup open source graph database that is mean to be a fully distributed graph database with all the consistency features of a database like PostgreDB, but the development team was proud and self-centered and the project was affected by it with an unknown direction about the project, but was my only option at the time.
-
-Then one day Apple decided to release FoundationDB a distributed ordered key value storage with amazing speed for transactions, ACID support and no need for expensive machines to be run, with the best potential to extend it to the need of your project requirements.
-
-From here the idea of Nomure was born, a fully distributed Graph database with the consistency of a relational database without the need of really expensive machines to make it work.
-
-Of course Nomure can't be compared with the big guys like Neo4j, Dgraph or Dragon, but it is just the perfect solution for the problems I'm facing at the moment of creating Nomure (I'm also trying to use already implemented solutions like the amazing Facebook articles on the topic), if it fits to your project as well be welcome to use it and contribute to make it a better database solution!
+I thought it would be a great project and thanks to how FoundationDB is designed it would allow me to achieve the features that I need to use in my application, of course, it can not be compared to everything that other databases have, but it has exactly everything I need for my use case at the moment I'm creating Okami. I will be very happy if it works for your project too!
 
 
 # Implementation
 
-The project contains various layers to make it work
+The project the following layers to make it work
 
 - Graph:
 
-    The graph layer for FDB, for specific details, check out `IMPLEMENTATION.md` 
-
-- ~~Network~~ (Out of the scope ATM, maybe possible in a long term):
-
-    ~~Is the one encharged to get request from the internet and translate them into a
-    query, mutation or subscription to data retrival to the fdb graph layer~~
-
-    - ~~GraphQL:~~
-
-        ~~The main network layer, everything you need about queries and mutations is here, it also is encharged of ensure the static types 
-        in the schema for adding them into the graphql layer~~
-
-    - ~~openCypher:~~
-        
-        ~~Is an advanced network layer for more complex queries and data analisys, such as recommendation systems~~
+    The graph layer for FDB, for specific details like serialization etc... check out the `IMPLEMENTATION.md` file
 
 
 ## Installation

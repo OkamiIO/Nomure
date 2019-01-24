@@ -86,9 +86,11 @@ defmodule Nomure.Database.State do
       Subspace.new(
         index_dir,
         Tuple.new({
+          # node_name
+          ByteString.new(),
           # property_name
           ByteString.new(),
-          # {property_value, uid}
+          # {property_value, node_uid}
           Dynamic.new()
         })
       ),
@@ -166,7 +168,7 @@ defmodule Nomure.Database.State do
   # defines the uid coder
   #
   # params{node_name}: string
-  # params{uid}: 64 bits little endian integer
+  # params{uid}: integer
   #
   # (node_name, uid)
   defp get_uid_coder() do
