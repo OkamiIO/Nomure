@@ -4,15 +4,7 @@ defmodule Nomure do
   """
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Nomure.hello
-      :world
-
+  Starts the database
   """
-  def hello do
-    :world
-  end
+  defdelegate start(), to: Nomure.Database
 end

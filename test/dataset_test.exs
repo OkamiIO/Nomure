@@ -4,15 +4,111 @@ defmodule DatasetTest do
   alias NimbleCSV.RFC4180, as: CSV
   alias Nomure.Node
   alias Nomure.Schema.{ParentNode, ChildrenNode}
-  alias Nomure.Schema.Query.{ParentQuery, ChildrenQuery, UniqueQuery}
+  alias Nomure.Schema.Query.{ParentQuery}
 
+  @schema %{
+    "movies" => %{
+      "movie_id" => %{
+        "type" => "integer",
+        "index" => true
+      },
+      "adult" => %{
+        "type" => "boolean"
+      },
+      "belongs_to_collection" => %{
+        "type" => "string"
+      },
+      "budget" => %{
+        "type" => "integer"
+      },
+      "genres" => %{
+        "type" => "string"
+      },
+      "homepage" => %{
+        "type" => "string",
+        "index" => ["unique"]
+      },
+      "id" => %{
+        "type" => "integer"
+      },
+      "imdb_id" => %{
+        "type" => "string"
+      },
+      "original_language" => %{
+        "type" => "string"
+      },
+      "original_title" => %{
+        "type" => "string"
+      },
+      "overview" => %{
+        "type" => "string"
+      },
+      "popularity" => %{
+        "type" => "string"
+      },
+      "poster_path" => %{
+        "type" => "string"
+      },
+      "production_companies" => %{
+        "type" => "string"
+      },
+      "production_countries" => %{
+        "type" => "string"
+      },
+      "release_date" => %{
+        "type" => "string"
+      },
+      "revenue" => %{
+        "type" => "integer"
+      },
+      "runtime" => %{
+        "type" => "string"
+      },
+      "spoken_languages" => %{
+        "type" => "string"
+      },
+      "status" => %{
+        "type" => "string"
+      },
+      "tagline" => %{
+        "type" => "string"
+      },
+      "title" => %{
+        "type" => "string",
+        "index" => ["exact"]
+      },
+      "video" => %{
+        "type" => "boolean"
+      },
+      "vote_average" => %{
+        "type" => "float"
+      },
+      "vote_count" => %{
+        "type" => "integer"
+      }
+    },
+    "users" => %{
+      "user_id" => %{
+        "type" => "integer",
+        "index" => true
+      },
+      "movies" => %{
+        "type" => "node_list"
+      }
+    }
+  }
+
+  @tag :expensive
   setup_all do
     :os.cmd(~S"fdbcli --exec \"writemode on; clearrange \x00 \xff;\"" |> String.to_charlist())
+
+    Nomure.Database.set_schema(@schema)
 
     ratings = parse_ratings()
     movies = parse_movies()
 
-    IO.inspect("Inserting movie data - Start time #{NaiveDateTime.utc_now()}")
+    IO.puts("Inserting movie data - Start time #{NaiveDateTime.utc_now()}")
+
     # create movies nodes, save map with id
     movie_ids =
       movies
@@ -26,41 +122,18 @@ defmodule DatasetTest do
               node_data: movie
             }
 
-            # now = NaiveDateTime.utc_now()
-
             {{_node_name, uid}, _relation_uids} = Node.create_node(data)
-
-            # NaiveDateTime.diff(NaiveDateTime.utc_now(), now, :millisecond)
-            # |> IO.inspect(label: "[#{uid}](#{movie.movie_id})")
 
             {movie.movie_id, uid}
         end,
-        concurrency: 100
+        max_concurrency: 100
       )
-      # |> Enum.map(fn
-      #   movie ->
-      #     movie = Map.put_new(movie, :movie_id, movie.id)
-
-      #     data = %ParentNode{
-      #       node_name: "movies",
-      #       node_data: movie
-      #     }
-
-      #     now = NaiveDateTime.utc_now()
-
-      #     {{_node_name, uid}, _relation_uids} = Node.create_node(data)
-
-      #     NaiveDateTime.diff(NaiveDateTime.utc_now(), now, :millisecond)
-      #     |> IO.inspect(label: "[#{uid}](#{movie.movie_id})")
-
-      #     {movie.movie_id, uid}
-      # end)
       |> Enum.to_list()
       |> Map.new()
 
-    IO.inspect("\t Movie data inserted - Ended time #{NaiveDateTime.utc_now()}")
+    IO.puts("\t Movie data inserted - Ended time #{NaiveDateTime.utc_now()}")
 
-    IO.inspect("Perpare user data - Start time #{NaiveDateTime.utc_now()}")
+    IO.puts("Perpare user data - Start time #{NaiveDateTime.utc_now()}")
     # create users nodes, save map with id
     user_parent_nodes =
       ratings
@@ -95,9 +168,9 @@ defmodule DatasetTest do
           }
       end)
 
-    IO.inspect("\t User parent nodes created - Ended time #{NaiveDateTime.utc_now()}")
+    IO.puts("\t User parent nodes created - Ended time #{NaiveDateTime.utc_now()}")
 
-    IO.inspect("Start user insert - Start time #{NaiveDateTime.utc_now()}")
+    IO.puts("Start user insert - Start time #{NaiveDateTime.utc_now()}")
 
     user_parent_nodes
     |> Task.async_stream(
@@ -111,16 +184,17 @@ defmodule DatasetTest do
 
           {user_id, uid}
       end,
-      concurrency: 100
+      max_concurrency: 100
     )
     |> Enum.to_list()
     |> Map.new()
 
-    IO.inspect("\t User data inserted - End time #{NaiveDateTime.utc_now()}")
+    IO.puts("\t User data inserted - End time #{NaiveDateTime.utc_now()}")
 
     {:ok, %{}}
   end
 
+  @tag :expensive
   test "get movie by name", _state do
     lookup_result =
       Node.query(%ParentQuery{
@@ -135,9 +209,16 @@ defmodule DatasetTest do
           :popularity
         ]
       })
-      |> IO.inspect()
 
-    assert true
+    assert lookup_result == [
+             %{
+               adult: false,
+               genres:
+                 "[{'id': 16, 'name': 'Animation'}, {'id': 35, 'name': 'Comedy'}, {'id': 10751, 'name': 'Family'}]",
+               original_language: "en",
+               popularity: "21.946943"
+             }
+           ]
   end
 
   def parse_ratings do

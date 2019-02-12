@@ -29,7 +29,7 @@ defmodule Nomure.MixProject do
       {:jason, "~> 1.1"},
       {:benchee, "~> 0.11", only: :dev},
       {:nimble_csv, "~> 0.5.0", only: [:dev, :test]},
-      {:exprof, "~> 0.2.0", only: [:dev, :test]}
+      {:msgpax, "~> 2.2"}
     ]
   end
 end

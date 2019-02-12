@@ -1,8 +1,7 @@
 defmodule Nomure.Node.ChunkImpl.Property do
   alias Nomure.TransactionUtils, as: Utils
   alias Nomure.Database.State
-
-  @max_string_size_indexable Application.get_env(:nomure, :max_string_size_indexable, 16)
+  alias Nomure.Node.ChunkImpl.Property.Query
 
   def insert_properties(tr, uid, node_data, %State{
         properties: properties_dir
@@ -15,68 +14,118 @@ defmodule Nomure.Node.ChunkImpl.Property do
           # TODO is this really necesary? We always override uid at the end of the function...
           :ok
 
-        {key, value} ->
-          Utils.set_transaction(tr, {uid, key |> Atom.to_string()}, value, properties_dir)
+        {property_name, value} ->
+          property_name = property_name |> to_string()
+          schema = Nomure.Database.get_schema()
+
+          check_value_type_index(schema, uid, property_name, value)
+
+          Utils.set_transaction(tr, {uid, property_name}, value, properties_dir)
       end
     )
 
     Utils.set_transaction(tr, {uid, "id"}, nil, properties_dir)
   end
 
-  def index_properties(_tr, _uid, [], _state) do
-    nil
+  def check_value_type_index(nil, {_node_name, _node_uid}, _property_name, _value) do
+    # no schema setup so just return :ok
+    :ok
   end
 
-  def index_properties(tr, uid, node_data, %State{
-        properties_index: properties_index_dir
-      }) do
-    index_property(tr, uid, node_data, properties_index_dir)
+  def check_value_type_index(schema, {node_name, _node_uid}, property_name, value) do
+    node_schema = schema[node_name]
+
+    if node_schema[property_name] == nil do
+      # Should we talk to other nodes in order to check new schemas?
+      throw("Given property name (#{property_name}) does not exist at the schema definition")
+    end
+
+    case node_schema[property_name] do
+      %{"type" => "integer"} when is_integer(value) ->
+        :ok
+
+      %{"type" => "float"} when is_float(value) ->
+        :ok
+
+      %{"type" => "boolean"} when is_boolean(value) ->
+        :ok
+
+      %{"type" => "string"} when is_binary(value) ->
+        :ok
+
+      %{"type" => "list"} when is_list(value) ->
+        :ok
+
+      %{"type" => "datetime"} ->
+        case value do
+          %DateTime{} ->
+            :ok
+
+          _ ->
+            throw_not_valid_schema_value("datetime", property_name, value)
+        end
+
+      %{"type" => "date"} ->
+        case value do
+          %Date{} ->
+            :ok
+
+          _ ->
+            throw_not_valid_schema_value("date", property_name, value)
+        end
+
+      %{"type" => "time"} ->
+        case value do
+          %Time{} ->
+            :ok
+
+          _ ->
+            throw_not_valid_schema_value("time", property_name, value)
+        end
+
+      %{"type" => type} ->
+        throw_not_valid_schema_value(type, property_name, value)
+
+      _ ->
+        throw(
+          "Given value does not fit the property schema definition (no metadata available - #{
+            value
+          })"
+        )
+    end
+
+    check_value_type_index_uniqueness(node_schema[property_name], node_name, property_name, value)
   end
 
-  defp index_property(
-         tr,
-         {node_name, uid},
-         node_data,
-         properties_index_dir
+  defp check_value_type_index_uniqueness(
+         %{"index" => ["unique"]},
+         node_name,
+         property_name,
+         value
        ) do
-    data = get_indexable_properties(node_data)
+    # TODO do we really need to create another transaction?
+    Utils.transact(fn tr, state ->
+      Query.indexed_values(tr, state, node_name, property_name, value, 1)
+    end)
+    |> Enum.any?()
+    |> case do
+      true ->
+        throw("Value already exist!")
 
-    Enum.each(
-      data,
-      fn
-        {key, value} ->
-          Utils.set_transaction(
-            tr,
-            {node_name, key |> Atom.to_string(), {value, {:integer, uid}}},
-            nil,
-            properties_index_dir
-          )
-      end
-    )
+      _ ->
+        :ok
+    end
   end
 
-  # get the indexable properties
-  # for the moment the only valid index properties are
-  # integer, float, boolean and user defined string length
-  # be careful, don't set string size too big, because will cause performance problems
-  defp get_indexable_properties(node_data) do
-    node_data
-    |> Enum.reduce(%{}, fn
-      {key, value}, acc when is_integer(value) ->
-        Map.put(acc, key, {:integer, value})
+  defp check_value_type_index_uniqueness(_, _node_name, _property_name, _value) do
+    :ok
+  end
 
-      {key, value}, acc when is_float(value) ->
-        Map.put(acc, key, {:float32, value})
-
-      {key, value}, acc when is_boolean(value) ->
-        Map.put(acc, key, {:boolean, value})
-
-      {key, value}, acc
-      when is_binary(value) and byte_size(value) <= @max_string_size_indexable ->
-        Map.put(acc, key, {:unicode_string, value})
-
-      _, acc ->
-        acc
-    end)
+  defp throw_not_valid_schema_value(type, property_name, value) do
+    throw(
+      "Given value does not fit the property schema definition (#{inspect(type)} - #{
+        inspect(property_name)
+      } - #{inspect(value)})"
+    )
   end
 end

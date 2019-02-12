@@ -5,7 +5,8 @@ defmodule Nomure.Database.State do
     :properties_index,
     :out_nodes,
     :inverse_nodes,
-    :edges
+    :edges,
+    :uid_hca
   ]
   defstruct [
     :db,
@@ -13,7 +14,8 @@ defmodule Nomure.Database.State do
     :properties_index,
     :out_nodes,
     :inverse_nodes,
-    :edges
+    :edges,
+    :uid_hca
   ]
 
   alias FDB.{Transaction, Database}
@@ -31,29 +33,32 @@ defmodule Nomure.Database.State do
 
   alias Nomure.Database.Coder.GraphValue
 
-  @property_key "p"
-  @property_index_key "pi"
-  @out_nodes_key "o"
-  @in_nodes_key "i"
-  @edges_key "e"
+  @property_key "property"
+  @property_index_key "property_index"
+  @out_nodes_key "out_nodes"
+  @in_nodes_key "in_nodes"
+  @edges_key "edges"
+  @uid_hca_key "uid_hca"
 
   @type t :: %__MODULE__{
           db: Database.t(),
-          properties: Database.t(),
-          properties_index: Database.t(),
-          out_nodes: Database.t(),
-          inverse_nodes: Database.t(),
-          edges: Database.t()
+          properties: Transaction.Coder.t(),
+          properties_index: Transaction.Coder.t(),
+          out_nodes: Transaction.Coder.t(),
+          inverse_nodes: Transaction.Coder.t(),
+          edges: Transaction.Coder.t(),
+          uid_hca: FDB.Directory.Subspace.t()
         }
 
   def from(db) do
     %__MODULE__{
       db: db,
-      properties: FDB.Database.set_defaults(db, %{coder: get_properties_coder(db)}),
-      properties_index: FDB.Database.set_defaults(db, %{coder: get_properties_index_coder(db)}),
-      out_nodes: FDB.Database.set_defaults(db, %{coder: get_out_nodes_coder(db)}),
-      inverse_nodes: FDB.Database.set_defaults(db, %{coder: get_inverse_nodes_coder(db)}),
-      edges: FDB.Database.set_defaults(db, %{coder: get_edges_coder(db)})
+      properties: get_properties_coder(db),
+      properties_index: get_properties_index_coder(db),
+      out_nodes: get_out_nodes_coder(db),
+      inverse_nodes: get_inverse_nodes_coder(db),
+      edges: get_edges_coder(db),
+      uid_hca: get_dir(db, @uid_hca_key)
     }
   end
 
@@ -112,6 +117,8 @@ defmodule Nomure.Database.State do
           get_uid_coder(),
           # edge_name
           ByteString.new(),
+          # unix_utc_timestamp
+          Integer.new(),
           # relation_uid
           get_uid_coder()
         })

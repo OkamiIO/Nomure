@@ -45,7 +45,7 @@ Nomure is built on top of FoundationDB, to understand the way it works, check ou
 
 `node_name` : `string` describing the name of the node
 
-`node_uid` : global autoincremented unique `integer` id
+`node_uid` : global unique non-sequential `integer` id
 
 `uid` : `(node_name, node_uid)`
 
@@ -89,9 +89,11 @@ Give me all nodes of the node name `A` with the property name `y` and the value 
 
 Relationship properties, reference other nodes 
 
+`unix_utc_timestamp` is to keep the "insert order" in order to paginate correctly
+
 #### *Serialize format*
 
-`(uid, edge_name, uid) = ''` 
+`(uid, edge_name, unix_utc_timestamp, uid) = ''` 
 
 #### *E.g* 
 
@@ -133,7 +135,7 @@ Primitive types of the Edge
 
 #### *Serialize format*
 
-`(uid, property_name) = value`
+`(edge_name, parent_node_uid, relation_node_uid, edge_property_name) = value`
 
 
 ---

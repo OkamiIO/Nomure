@@ -48,6 +48,8 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
 
       add_edge(tr, uid, value, edge_name, edge_data, edge_dir)
 
+      increment_relationship_counter(tr, uid, edge_name)
+
       value
     else
       raise Nomure.Error.NodeValueError, relation_uid: value, edge_name: edge_name
@@ -74,13 +76,15 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
 
     add_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir)
 
+    increment_relationship_counter(tr, uid, edge_name)
+
     relation_uid
   end
 
   defp add_relationship(tr, uid, edge_name, relation_uid, out_nodes_dir) do
     Utils.set_transaction(
       tr,
-      {uid, edge_name |> to_string(), relation_uid},
+      {uid, edge_name |> to_string(), DateTime.utc_now() |> DateTime.to_unix(), relation_uid},
       nil,
       out_nodes_dir
     )
@@ -102,5 +106,11 @@ defmodule Nomure.Node.ChunkImpl.Vertex do
 
   defp add_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir) do
     Edge.insert_edge(tr, uid, relation_uid, edge_name, edge_data, edge_dir)
+  end
+
+  defp increment_relationship_counter(tr, {node_name, uid}, edge_name) do
+    # r : relationship
+    # c : counter
+    Utils.add_to_counter(tr, "r:c:#{node_name}#{uid}#{edge_name}")
   end
 end

@@ -2,68 +2,143 @@ defmodule Nomure.TransactionUtils do
   import FDB.Option
 
   alias FDB.{Database, Transaction}
+  alias FDB.Directory.HighContentionAllocator
 
-  @database_state_key :node_state
-  @uid_size Application.get_env(:nomure, :uid_key_size, 64)
+  @database_state_key :graph_state
+  @atomic_coder FDB.Transaction.Coder.new()
 
   def get_database_state_key, do: @database_state_key
 
   def transact(func) when is_function(func, 2) do
     state = Nomure.Database.get_state()
 
-    # tr = FDB.Transaction.create(state.db, %{snapshot: true})
-    # tr = FDB.Transaction.create(state.db)
-    # value = func.(tr, state)
-    # :ok = Transaction.commit(tr)
-    # value
     Database.transact(state.db, fn tr -> func.(tr, state) end)
+  end
+
+  def clear_transaction(tr, key, dir) do
+    Transaction.clear(tr, key, get_coder_options(dir))
   end
 
   @doc """
   Set the transaction with the given key and value, it changes the coder based in the dir parameter
   """
   @spec set_transaction(FDB.Transaction.t(), any(), any(), FDB.Database.t()) ::
-          FDB.Transaction.t()
-  def set_transaction(tr, key, value, dir) do
+          :ok
+  def set_transaction(tr, key, value, coder) do
     Transaction.set(
       tr,
       key,
       value,
-      get_coder_options(dir)
+      get_coder_options(coder)
     )
-
-    tr
   end
 
-  def get_transaction(tr, key, dir) do
-    result = Transaction.get(tr, key, get_coder_options(dir))
+  def get_transaction(tr, key, coder) do
+    result = Transaction.get(tr, key, get_coder_options(coder))
 
     {:ok, tr, result}
   end
 
-  def add_and_get_counter(tr, key, addition \\ 1) when is_number(addition) do
-    # state = Nomure.Database.get_state()
+  def get_new_uid(tr, state) do
+    {a, _} =
+      HighContentionAllocator.allocate(state.uid_hca.directory, tr)
+      # nil dummy value
+      |> FDB.Coder.Integer.decode(nil)
 
-    # tr = FDB.Transaction.create(state.db)
+    a
+  end
 
-    # Database.transact(state.db, fn tr ->
+  def add_to_counter(tr, key, addition \\ 1) when is_integer(addition) do
     Transaction.atomic_op(
       tr,
       key,
       mutation_type_add(),
-      <<addition::little-integer-unsigned-size(@uid_size)>>,
-      %{coder: FDB.Transaction.Coder.new()}
+      # 64 bits (8 bytes) counter as documentation mentions
+      <<addition::little-integer-unsigned-size(64)>>,
+      %{coder: @atomic_coder}
     )
-
-    <<counter::little-integer-unsigned-size(@uid_size)>> = Transaction.get(tr, key)
-    counter
-    # end)
-
-    # :ok = Transaction.commit(tr)
-    # counter
   end
 
-  defp get_coder_options(dir) do
-    %{coder: dir.coder}
+  def get_index_key_value(value, _, _, _) when is_integer(value), do: {:integer, value}
+  def get_index_key_value(value, _, _, _) when is_float(value), do: {:float32, value}
+  def get_index_key_value(value, _, _, _) when is_boolean(value), do: {:boolean, value}
+
+  def get_index_key_value(value, schema, node_name, property_name) when is_binary(value) do
+    case schema[node_name][property_name] do
+      %{"type" => "datetime"} ->
+        get_date_time_key_value(value)
+
+      %{"type" => "date"} ->
+        get_date_key_value(value)
+
+      %{"type" => "time"} ->
+        get_time_key_value(value)
+
+      _ ->
+        {:unicode_string, value}
+    end
+  end
+
+  defp get_date_time_key_value(
+         <<year::binary-4, "-", month::binary-2, "-", day::binary-2, "T", hour::binary-2, ":",
+           minute::binary-2, ":", second::binary-2, _rest::binary>>
+       ) do
+    {:nested,
+     {{:nested,
+       {{:integer, year |> parse_integer()}, {:integer, month |> parse_integer()},
+        {:integer, day |> parse_integer()}}},
+      {:nested,
+       {{:integer, hour |> parse_integer()}, {:integer, minute |> parse_integer()},
+        {:integer, second |> parse_integer()}}}}}
+  end
+
+  defp get_date_time_key_value(<<year::binary-4, "-", month::binary-2, "-", day::binary-2>>) do
+    {:nested,
+     {{:nested,
+       {{:integer, year |> parse_integer()}, {:integer, month |> parse_integer()},
+        {:integer, day |> parse_integer()}}}}}
+  end
+
+  defp get_date_time_key_value(<<year::binary-4, "-", month::binary-2>>) do
+    {:nested,
+     {{:nested, {{:integer, year |> parse_integer()}, {:integer, month |> parse_integer()}}}}}
+  end
+
+  defp get_date_time_key_value(<<year::binary-4>>) do
+    {:nested, {{:nested, {{:integer, year |> parse_integer()}}}}}
+  end
+
+  defp get_date_key_value(<<year::binary-4, "-", month::binary-2, "-", day::binary-2>>) do
+    {{:integer, year |> parse_integer()}, {:integer, month |> parse_integer()},
+     {:integer, day |> parse_integer()}}
+  end
+
+  defp get_date_key_value(<<year::binary-4, "-", month::binary-2>>) do
+    {{:integer, year |> parse_integer()}, {:integer, month |> parse_integer()}}
+  end
+
+  defp get_date_key_value(<<year::binary-4>>) do
+    {{:integer, year |> parse_integer()}}
+  end
+
+  defp get_time_key_value(<<hour::binary-4, ":", minute::binary-2, ":", second::binary-2>>) do
+    {{:integer, hour |> parse_integer()}, {:integer, minute |> parse_integer()},
+     {:integer, second |> parse_integer()}}
+  end
+
+  defp get_time_key_value(<<hour::binary-4, ":", minute::binary-2>>) do
+    {{:integer, hour |> parse_integer()}, {:integer, minute |> parse_integer()}}
+  end
+
+  defp get_time_key_value(<<hour::binary-4>>) do
+    {{:integer, hour |> parse_integer()}}
+  end
+
+  defp parse_integer(value) do
+    value |> Integer.parse() |> elem(0)
+  end
+
+  defp get_coder_options(coder) do
+    %{coder: coder}
   end
 end

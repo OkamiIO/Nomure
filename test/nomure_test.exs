@@ -5,91 +5,75 @@ defmodule NomureTest do
   alias Nomure.Node
   alias Nomure.Schema.{ParentNode, ChildrenNode}
   alias Nomure.Schema.Query.{ParentQuery, ChildrenQuery, UniqueQuery}
-  alias Nomure.Schema.Plan
-  alias Nomure.TransactionUtils
 
-  alias FDB.{Database, Cluster}
-
-  test "parser test" do
-    parsed =
-      Nomure.Schema.Query.Plan.Parser.parse(%{
-        OR: [
-          %{
-            description: "description",
-            OR: [
-              %{
-                test: "hmmm"
-              },
-              %{
-                test: nil
-              }
-            ]
-          },
-          %{
-            description: nil,
-            date: "2018"
-          }
-        ],
-        date: "bla",
-        createdAt: "2016",
-        createdAt_gt: "2017",
-        createdAt_lt: "2019"
-      })
-
-    result = %Plan{
-      instruction: {"createdAt", %{"eq" => "2016", "gt" => "2017", "lt" => "2019"}},
-      on_fail: :fail,
-      on_success: %Nomure.Schema.Plan{
-        instruction: {"date", "bla"},
-        on_fail: %Nomure.Schema.Plan{
-          instruction: {"description", "description"},
-          on_fail: %Nomure.Schema.Plan{
-            instruction: {"test", "hmmm"},
-            on_fail: %Nomure.Schema.Plan{
-              instruction: {"test", nil},
-              on_fail: %Nomure.Schema.Plan{
-                instruction: {"date", "2018"},
-                on_fail: :fail,
-                on_success: %Nomure.Schema.Plan{
-                  instruction: {"description", nil},
-                  on_fail: :fail,
-                  on_success: :success
-                }
-              },
-              on_success: :success
-            },
-            on_success: :success
-          },
-          on_success: :success
-        },
-        on_success: :success
+  @schema %{
+    "users" => %{
+      "name" => %{
+        "type" => "string",
+        "index" => ["exact"]
+      },
+      "password" => %{
+        "type" => "string"
+      },
+      "email" => %{
+        "type" => "string",
+        "index" => ["unique"]
+      },
+      "name@jp" => %{
+        "type" => "string",
+        "index" => ["exact"]
+      },
+      "magic_number" => %{
+        "type" => "integer",
+        "index" => true
+      },
+      "age" => %{
+        "type" => "integer",
+        "index" => true
+      },
+      "gender" => %{
+        "type" => "boolean"
+      },
+      "a_list" => %{
+        "type" => "list"
+      },
+      "books" => %{
+        "type" => "node_list",
+        "node_type" => "books"
+      }
+    },
+    "books" => %{
+      "name" => %{
+        "type" => "string",
+        "index" => "fulltext"
+      },
+      "author" => %{
+        "type" => "string"
+      },
+      "description" => %{
+        "type" => "string"
+      },
+      "release_date" => %{
+        "type" => "date",
+        "index" => true
+      },
+      "datetime" => %{
+        "type" => "datetime",
+        "index" => true
+      },
+      "magic_number" => %{
+        "type" => "integer",
+        "index" => true
       }
     }
+  }
 
-    or_parse =
-      Nomure.Schema.Query.Plan.Parser.parse(%{
-        OR: [
-          %{magic_number_gte: 46},
-          %{name: "Sif"}
-        ]
-      })
-
-    or_result = %Plan{
-      instruction: {"magic_number", %{"gte" => 46}},
-      on_fail: %Plan{
-        instruction: {"name", "Sif"},
-        on_fail: :fail,
-        on_success: :success
-      },
-      on_success: :success
-    }
-
-    assert parsed == result
-    assert or_parse == or_result
-  end
-
-  test "set data" do
+  setup_all do
     :os.cmd(~S"fdbcli --exec \"writemode on; clearrange \x00 \xff;\"" |> String.to_charlist())
+
+    Nomure.Database.set_schema(@schema)
+
+    date = DateTime.utc_now()
 
     data = %ParentNode{
       node_name: "users",
@@ -100,7 +84,8 @@ defmodule NomureTest do
         name@jp: "シフ",
         magic_number: 45,
         age: 20,
-        gender: true
+        gender: true,
+        a_list: [5, 5, 8, 4, 3, 4]
       },
       node_relationships: %{
         books: [
@@ -116,11 +101,10 @@ defmodule NomureTest do
 
               A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
 
-
               Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
               """,
-              # TODO dates!
-              release_date: "octubre de 2015",
+              release_date: Date.new(2015, 10, 1) |> elem(1),
+              datetime: date,
               magic_number: 46
             },
             edge_data: %{
@@ -131,82 +115,139 @@ defmodule NomureTest do
       }
     }
 
-    {{node_name, uid}, _relation_uids} = Node.create_node(data)
+    {{node_name, uid}, %{books: [{_, relation_uid}]}} = Node.create_node(data)
 
-    node_exist? = Node.node_exist?(uid, node_name)
+    {:ok, %{parent_uid: {node_name, uid}, child_uid: relation_uid, date: date}}
+  end
 
-    lookup_result =
+  test "node exist?", %{parent_uid: {node_name, uid}} do
+    assert Node.node_exist?(uid, node_name)
+  end
+
+  test "between where query", %{parent_uid: {_, uid}} do
+    assert [%{age: 20, email: "test@test.com", id: uid, name@jp: "シフ"}] ==
+             Node.query(%ParentQuery{
+               node_name: "users",
+               where: %{
+                 OR: [
+                   %{magic_number_gte: 40, magic_number_lte: 50},
+                   %{name: "Sif"}
+                 ]
+               },
+               select: [
+                 :id,
+                 :age,
+                 :email,
+                 :name@jp
+               ]
+             })
+  end
+
+  test "unique query", %{child_uid: relation_uid} do
+    assert %{
+             author: "Fernando Trujillo Sanz",
+             description: """
+             El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
+
+             La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
+
+             A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
+
+             Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
+             """
+           } ==
+             Node.query(%UniqueQuery{
+               node_name: "books",
+               identifier: [id: relation_uid],
+               select: [
+                 :description,
+                 :author
+                 # friends in common query! use MapSet.intersection(map_set, map_set)
+                 # friends: %{where: %{friends: %{intersect: :@friends}}}
+               ]
+             })
+  end
+
+  test "where date/time", %{date: date} do
+    book_by_date =
       Node.query(%ParentQuery{
-        node_name: "users",
-        where: %{
-          OR: [
-            %{magic_number_gte: 40, magic_number_lte: 50},
-            %{name: "Sif"}
-          ]
-        },
-        select: [
-          :id,
-          :age,
-          :email,
-          :name@jp
-        ]
-      })
-
-    book_data =
-      Node.query(%UniqueQuery{
         node_name: "books",
-        identifier: [id: 2],
+        where: %{release_date_gte: "2014"},
         select: [
-          :description,
-          :author
-          # friends in common query! use MapSet.intersection(map_set, map_set)
-          # friends: %{where: %{friends: %{intersect: :@friends}}}
+          :author,
+          :release_date
         ]
       })
 
-    edge_data =
-      TransactionUtils.transact(fn tr, state ->
-        state = Nomure.Database.get_state()
+    book_by_datetime =
+      Node.query(%ParentQuery{
+        node_name: "books",
+        where: %{datetime_gte: "#{date.year}-01"},
+        select: [
+          :author,
+          :release_date,
+          :datetime
+        ]
+      })
 
-        %ParentQuery{
-          node_name: "users",
-          where: [id: 1],
-          select: [
-            books: %ChildrenQuery{
-              node_name: "books",
-              # where: [id: 2],
-              edges: [:since]
-            }
-          ]
-        }
-
-        # {books: [%{since: "date"}]}
-
-        FDB.Transaction.get(tr, {"books", {"users", 1}, {"books", 2}, "since"}, %{
-          coder: state.edges.coder
-        })
-      end)
-
-    assert edge_data == "20-10-2018"
-
-    assert book_data ==
+    assert book_by_datetime == [
              %{
                author: "Fernando Trujillo Sanz",
-               description: """
-               El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
-
-               La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
-
-               A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
-
-
-               Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
-               """
+               datetime: date,
+               release_date: ~D[2015-10-01]
              }
+           ]
 
-    assert lookup_result == [%{age: 20, email: "test@test.com", id: 1, name@jp: "シフ"}]
+    assert book_by_date == [%{author: "Fernando Trujillo Sanz", release_date: ~D[2015-10-01]}]
+  end
 
-    assert node_exist?
+  test "complex query", %{parent_uid: {_, uid}, child_uid: relation_uid} do
+    relation_ship_query =
+      Node.query(%UniqueQuery{
+        node_name: "users",
+        identifier: [id: uid],
+        select: [
+          :name,
+          :magic_number,
+          :a_list,
+          books: %ChildrenQuery{
+            node_name: "books",
+            select: [
+              :description,
+              :author,
+              :release_date
+            ],
+            edges: [:since]
+          }
+        ]
+      })
+
+    assert relation_ship_query == %{
+             a_list: [5, 5, 8, 4, 3, 4],
+             magic_number: 45,
+             name: "Sif",
+             books: %{
+               edges: [
+                 %{
+                   cursor: relation_uid,
+                   node: %{
+                     author: "Fernando Trujillo Sanz",
+                     description: """
+                     El mundo tiene un lado oculto, sobrenatural, que nos susurra, se intuye, pero que pocos perciben.
+
+                     La mayoría de las personas no son conscientes de ese lado paranormal... ni de sus riesgos.
+
+                     A veces se topan con esos peligros y desesperan, se atemorizan. Pero no todo está perdido...
+
+                     Dicen que en Madrid reposa una iglesia antigua. En su interior, frente a una cruz de piedra, se puede alzar una plegaria. Si la fortuna acompaña, aquel que no tiene alma la escuchará. Pero exigirá un elevado precio por sus servicios, que no todos están dispuestos a pagar. Mejor será asegurarse de que de verdad se quiere contar con él antes de recitar la plegaria.
+                     """,
+                     release_date: Date.new(2015, 10, 1) |> elem(1)
+                   },
+                   since: "20-10-2018"
+                 }
+               ]
+             }
+           }
   end
 
   test "get data" do
@@ -231,11 +272,13 @@ defmodule NomureTest do
       email: "bla",
       password: "bla",
       books: %{
-        edges: %{
-          cursor: 2,
-          sinde: "date",
-          node: %{name: "La biblia de los caidos", description: "long description"}
-        },
+        edges: [
+          %{
+            cursor: 2,
+            since: "date",
+            node: %{name: "La biblia de los caidos", description: "long description"}
+          }
+        ],
         page_info: %{
           hasNextPage: false,
           hasPreviousPage: false,

@@ -1,9 +1,6 @@
-:ok = FDB.start()
+:os.cmd(~S"fdbcli --exec \"writemode on; clearrange \x00 \xff;\"" |> String.to_charlist())
 
-db =
-  FDB.Cluster.create()
-  |> FDB.Database.create()
+Nomure.start()
 
-Nomure.Node.new(db)
-
-ExUnit.start()
+# ExUnit.start()
+ExUnit.start(exclude: [:expensive])
