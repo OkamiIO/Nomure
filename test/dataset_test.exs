@@ -191,7 +191,7 @@ defmodule DatasetTest do
 
     IO.puts("\t User data inserted - End time #{NaiveDateTime.utc_now()}")
 
-    {:ok, %{}}
+    {:ok, %{users_length: user_parent_nodes |> length()}}
   end
 
   @tag :expensive
@@ -219,6 +219,23 @@ defmodule DatasetTest do
                popularity: "21.946943"
              }
            ]
+  end
+
+  @tag :expensive
+  test "length correctness", %{users_length: users_length} do
+    lookup_result =
+      Node.query(%ParentQuery{
+        node_name: "users",
+        where: %{
+          user_id_gte: 0
+        },
+        select: [
+          :id
+        ]
+      })
+      |> length()
+
+    assert lookup_result == users_length
   end
 
   def parse_ratings do

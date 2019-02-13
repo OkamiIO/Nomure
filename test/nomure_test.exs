@@ -201,7 +201,7 @@ defmodule NomureTest do
     assert book_by_date == [%{author: "Fernando Trujillo Sanz", release_date: ~D[2015-10-01]}]
   end
 
-  test "complex query", %{parent_uid: {_, uid}, child_uid: relation_uid} do
+  test "complex query", %{parent_uid: {_, uid}, child_uid: relation_uid, date: date} do
     relation_ship_query =
       Node.query(%UniqueQuery{
         node_name: "users",
@@ -212,6 +212,7 @@ defmodule NomureTest do
           :a_list,
           books: %ChildrenQuery{
             node_name: "books",
+            where: %{datetime_gte: "#{date.year}-01"},
             select: [
               :description,
               :author,
