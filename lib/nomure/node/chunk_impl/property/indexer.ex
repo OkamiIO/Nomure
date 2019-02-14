@@ -242,7 +242,8 @@ defmodule Nomure.Node.ChunkImpl.Property.Indexer do
       when index in [true, "unique"] and is_map(value) ->
         {{:integer, value.hour}, {:integer, value.minute}, {:integer, value.second}}
 
-      %{"type" => "string", "index" => ["exact"]} when is_binary(value) ->
+      %{"type" => "string", "index" => index}
+      when is_binary(value) and (index == ["exact"] or index == ["unique"]) ->
         # todo implement remaining indexes
         {:unicode_string, value}
 

@@ -17,6 +17,8 @@ defmodule Nomure.Node.ChunkImpl.Property.Query do
 
   def get_query_index_key(node_name, property, value) do
     schema = Nomure.Database.get_schema()
+    node_name = node_name |> to_string()
+    property = property |> to_string()
 
     {node_name, property,
      {TransactionUtils.get_index_key_value(value, schema, node_name, property)}}

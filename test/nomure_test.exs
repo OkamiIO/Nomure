@@ -153,7 +153,7 @@ defmodule NomureTest do
              })
   end
 
-  test "where enum", %{parent_uid: {_, uid}} do
+  test "where enum", _ do
     assert [%{status: "working"}] ==
              Node.query(%ParentQuery{
                node_name: "users",
@@ -166,7 +166,7 @@ defmodule NomureTest do
              })
   end
 
-  test "unique query", %{child_uid: relation_uid} do
+  test "unique id query", %{child_uid: relation_uid} do
     assert %{
              author: "Fernando Trujillo Sanz",
              description: """
@@ -185,8 +185,17 @@ defmodule NomureTest do
                select: [
                  :description,
                  :author
-                 # friends in common query! use MapSet.intersection(map_set, map_set)
-                 # friends: %{where: %{friends: %{intersect: :@friends}}}
+               ]
+             })
+  end
+
+  test "unique index query", _ do
+    assert %{name@jp: "シフ"} ==
+             Node.query(%UniqueQuery{
+               node_name: "users",
+               identifier: [email: "test@test.com"],
+               select: [
+                 :name@jp
                ]
              })
   end
