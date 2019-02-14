@@ -74,6 +74,15 @@ defmodule Nomure.TransactionUtils do
       %{"type" => "time"} ->
         get_time_key_value(value)
 
+      %{"type" => "enum", "values" => values} ->
+        case values[value] do
+          nil ->
+            throw("Given enum value #{inspect(value)} is not a valid enum property")
+
+          enum_value ->
+            {:integer, enum_value}
+        end
+
       _ ->
         {:unicode_string, value}
     end

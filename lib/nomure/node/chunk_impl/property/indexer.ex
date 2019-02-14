@@ -218,6 +218,16 @@ defmodule Nomure.Node.ChunkImpl.Property.Indexer do
       when index in [true, "unique"] and is_boolean(value) ->
         {:boolean, value}
 
+      %{"type" => "enum", "index" => index, "values" => values}
+      when index in [true, "unique"] and is_binary(value) ->
+        case values[value] do
+          enum_value when is_integer(enum_value) ->
+            {:integer, enum_value}
+
+          _ ->
+            nil
+        end
+
       %{"type" => "datetime", "index" => index}
       when index in [true, "unique"] and is_map(value) ->
         {:nested,

@@ -8,6 +8,15 @@ defmodule NomureTest do
 
   @schema %{
     "users" => %{
+      "status" => %{
+        "type" => "enum",
+        "index" => true,
+        "values" => %{
+          "working" => 0,
+          "resting" => 1,
+          "complaining" => 2
+        }
+      },
       "name" => %{
         "type" => "string",
         "index" => ["exact"]
@@ -85,7 +94,8 @@ defmodule NomureTest do
         magic_number: 45,
         age: 20,
         gender: true,
-        a_list: [5, 5, 8, 4, 3, 4]
+        a_list: [5, 5, 8, 4, 3, 4],
+        status: "working"
       },
       node_relationships: %{
         books: [
@@ -139,6 +149,19 @@ defmodule NomureTest do
                  :age,
                  :email,
                  :name@jp
+               ]
+             })
+  end
+
+  test "where enum", %{parent_uid: {_, uid}} do
+    assert [%{status: "working"}] ==
+             Node.query(%ParentQuery{
+               node_name: "users",
+               where: %{
+                 status: "working"
+               },
+               select: [
+                 :status
                ]
              })
   end
