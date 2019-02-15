@@ -24,12 +24,11 @@ defmodule Nomure.Node.ChunkImpl.Property.Query do
   end
 
   def get_query_index_key(node_name, property, value) do
-    schema = Nomure.Database.get_schema()
     node_name = node_name |> to_string()
     property = property |> to_string()
+    schema = Nomure.Database.get_property_schema(node_name, property)
 
-    {node_name, property,
-     {TransactionUtils.get_index_key_value(value, schema, node_name, property)}}
+    {node_name, property, {TransactionUtils.get_index_key_value(value, schema)}}
   end
 
   def get_property_index_range(tr, state, range, limit \\ 0) do

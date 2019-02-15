@@ -27,4 +27,8 @@ defmodule Nomure.Database do
   def get_schema() do
     :persistent_term.get(:schema)
   end
+
+  def get_property_schema(node_name, property_name) do
+    get_schema()[node_name][property_name]
+  end
 end

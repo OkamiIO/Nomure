@@ -59,12 +59,18 @@ defmodule Nomure.TransactionUtils do
     )
   end
 
-  def get_index_key_value(value, _, _, _) when is_integer(value), do: {:integer, value}
-  def get_index_key_value(value, _, _, _) when is_float(value), do: {:float32, value}
-  def get_index_key_value(value, _, _, _) when is_boolean(value), do: {:boolean, value}
+  def get_index_key_value(_value, nil), do: throw("No schema set for the given field")
 
-  def get_index_key_value(value, schema, node_name, property_name) when is_binary(value) do
-    case schema[node_name][property_name] do
+  def get_index_key_value(value, %{"type" => "integer"}) when is_integer(value),
+    do: {:integer, value}
+
+  def get_index_key_value(value, %{"type" => "float"}) when is_float(value), do: {:float32, value}
+
+  def get_index_key_value(value, %{"type" => "boolean"}) when is_boolean(value),
+    do: {:boolean, value}
+
+  def get_index_key_value(value, property_schema) when is_binary(value) do
+    case property_schema do
       %{"type" => "datetime"} ->
         get_date_time_key_value(value)
 
@@ -83,7 +89,7 @@ defmodule Nomure.TransactionUtils do
             {:integer, enum_value}
         end
 
-      _ ->
+      %{"type" => "string"} ->
         {:unicode_string, value}
     end
   end

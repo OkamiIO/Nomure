@@ -26,7 +26,7 @@ defmodule Nomure.Node.ChunkImpl.Node.Query do
           field,
           Nomure.Node.ChunkImpl.Property.Query.get_property_value(tr, state, node_name, id, field)
           |> check_value_transformation(
-            Nomure.Database.get_schema()[node_name][field |> to_string]
+            Nomure.Database.get_property_schema(node_name, field |> to_string)
           )
         }
     end)

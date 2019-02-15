@@ -3,7 +3,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
   alias Nomure.Database.State
   alias Nomure.Node.ChunkImpl.Property.Query
 
-  def insert_properties(tr, uid, node_data, %State{
+  def insert_properties(tr, {node_name, _} = uid, node_data, %State{
         properties: properties_dir
       })
       when is_map(node_data) do
@@ -16,10 +16,10 @@ defmodule Nomure.Node.ChunkImpl.Property do
 
         {property_name, value} ->
           property_name = property_name |> to_string()
-          schema = Nomure.Database.get_schema()
+          property_schema = Nomure.Database.get_property_schema(node_name, property_name)
 
           value =
-            case check_value_type_index(schema, uid, property_name, value) do
+            case check_value_type_index(property_schema, uid, property_name, value) do
               :ok -> value
               new_value -> new_value
             end
@@ -31,21 +31,14 @@ defmodule Nomure.Node.ChunkImpl.Property do
     Utils.set_transaction(tr, {uid, "id"}, nil, properties_dir)
   end
 
-  def check_value_type_index(nil, {_node_name, _node_uid}, _property_name, _value) do
+  def check_value_type_index(nil, {_node_name, _node_uid}, property_name, _value) do
     # no schema setup so just return :ok
-    :ok
+    throw("Given property name (#{property_name}) does not exist at the schema definition")
   end
 
-  def check_value_type_index(schema, {node_name, _node_uid}, property_name, value) do
-    node_schema = schema[node_name]
-
-    if node_schema[property_name] == nil do
-      # Should we talk to other nodes in order to check new schemas?
-      throw("Given property name (#{property_name}) does not exist at the schema definition")
-    end
-
+  def check_value_type_index(property_schema, {node_name, _node_uid}, property_name, value) do
     return_value =
-      case node_schema[property_name] do
+      case property_schema do
         %{"type" => "integer"} when is_integer(value) ->
           :ok
 
@@ -109,7 +102,7 @@ defmodule Nomure.Node.ChunkImpl.Property do
       end
 
     check_value_type_index_uniqueness(
-      node_schema[property_name],
+      property_schema,
       node_name,
       property_name,
       value,
