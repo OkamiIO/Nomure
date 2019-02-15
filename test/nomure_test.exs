@@ -134,6 +134,33 @@ defmodule NomureTest do
     assert Node.node_exist?(uid, node_name)
   end
 
+  test "query all properties", %{parent_uid: {_node_name, uid}} do
+    assert Node.query(%ParentQuery{
+             node_name: "users",
+             where: %{
+               OR: [
+                 %{magic_number_gte: 40, magic_number_lte: 50},
+                 %{name: "Sif"}
+               ]
+             },
+             select: []
+           }) == [
+             %{
+               __node_name__: "users",
+               a_list: [5, 5, 8, 4, 3, 4],
+               age: 20,
+               email: "test@test.com",
+               gender: true,
+               id: uid,
+               magic_number: 45,
+               name: "Sif",
+               name@jp: "シフ",
+               password: "test",
+               status: 0
+             }
+           ]
+  end
+
   test "between where query", %{parent_uid: {_, uid}} do
     assert [%{age: 20, email: "test@test.com", id: uid, name@jp: "シフ"}] ==
              Node.query(%ParentQuery{

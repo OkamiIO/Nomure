@@ -1,6 +1,13 @@
 defmodule Nomure.Node.ChunkImpl.Node.Query do
   alias Nomure.Schema.Query.ChildrenQuery
 
+  def select_by_uid(tr, state, {node_name, id}, fields_list) when fields_list in [nil, []] do
+    Nomure.Node.ChunkImpl.Property.Query.get_all_properties_value(tr, state, node_name, id)
+    |> Map.new()
+    |> Map.put(:id, id)
+    |> Map.put(:__node_name__, node_name)
+  end
+
   def select_by_uid(tr, state, {node_name, id}, fields_list) do
     Map.new(fields_list, fn
       # if ChildrenQuery, evaluate __where__, get ids, query ids

@@ -3,6 +3,14 @@ defmodule Nomure.Node.ChunkImpl.Property.Query do
 
   alias FDB.{KeySelectorRange, Transaction}
 
+  def get_all_properties_value(tr, state, node_name, id) do
+    range = KeySelectorRange.starts_with({{node_name, id}})
+
+    Transaction.get_range(tr, range, %{coder: state.properties})
+    |> Enum.to_list()
+    |> Enum.map(&get_prop_and_value_from_encoded/1)
+  end
+
   def get_property_value(tr, state, node_name, id, property_name) do
     FDB.Transaction.get(tr, {{node_name, id}, property_name |> to_string()}, %{
       coder: state.properties
@@ -38,5 +46,9 @@ defmodule Nomure.Node.ChunkImpl.Property.Query do
 
   defp get_uid_from_encoded({{node_name, _, {_, {_, uid}}}, "nil"}) do
     {node_name, uid}
+  end
+
+  defp get_prop_and_value_from_encoded({{_, property_name}, value}) do
+    {property_name |> String.to_existing_atom(), value}
   end
 end
