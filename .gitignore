@@ -27,3 +27,7 @@ nomure-*.tar
 
 # schema file
 schema.graphql
+
+/native/nomure_native/target
+
+/priv/native

@@ -7,7 +7,18 @@ defmodule Nomure.MixProject do
       version: "0.1.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
+      compilers: [:rustler] ++ Mix.compilers(),
+      rustler_crates: rustler_crates(),
       deps: deps()
+    ]
+  end
+
+  defp rustler_crates do
+    [
+      nomure_native: [
+        path: "native/nomure_native",
+        mode: :release
+      ]
     ]
   end
 
@@ -29,7 +40,8 @@ defmodule Nomure.MixProject do
       {:jason, "~> 1.1"},
       {:benchee, "~> 0.11", only: :dev},
       {:nimble_csv, "~> 0.5.0", only: [:dev, :test]},
-      {:msgpax, "~> 2.2"}
+      {:msgpax, "~> 2.2"},
+      {:rustler, "~> 0.19.0"}
     ]
   end
 end

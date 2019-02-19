@@ -1,0 +1,18 @@
+[package]
+name = "nomure_native"
+version = "0.1.0"
+authors = []
+
+[lib]
+name = "nomure_native"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+
+[dependencies]
+rustler = "0.18.0"
+rustler_codegen = "0.18.0"
+lazy_static = "1.0"
+igo-rs = "0.2.4"
+unic = "0.8.0"
+stopwords = "0.1.0"
+rust-stemmers = "1.1.0"
