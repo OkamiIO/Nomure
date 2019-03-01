@@ -6,17 +6,7 @@ This is the main database we use at [Okami](https://www.okami.io)!
 
 The repo acts as a Graph layer for [FoundationDB](https://www.foundationdb.org)!
 
-***This project is a work in progress, be careful using it***
-
-
-# Motivation
-
-Graph databases are amazing, from the first time that I knew of its features and use I was fascinated, but most implementations of them were used at a big scale on companies like Google and Facebook, with its use being more for analysis than for storage.
-
-I wanted to have single database that could behave like a graph database, but that it had all the guarantees of a database like Postgres, was cheap and easy to scale, but in the world of graph databases it is really difficult to find all that in one place... Until I came across FoundationDB and from there Nomure was born.
-
-I thought it would be a great project and thanks to how FoundationDB is designed it would allow me to achieve the features that I need to use in my application, of course, it can not be compared to everything that other databases have, but it has exactly everything I need for my use case at the moment I'm creating Okami. I will be very happy if it works for your project too!
-
+***This branch is a rewrite in order to clean up the code, do not use it yet***
 
 # Implementation
 
